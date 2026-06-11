@@ -1,0 +1,28 @@
+[Unit]
+Description=Claude Code Remote Control - %i
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+# Identity for SELF-detection: inherited by on-demand/worktree sessions so the
+# skill can refuse stop/destroy of the instance it is running inside, regardless
+# of the session's working directory.
+Environment=RCD_INSTANCE=%i
+# Self-contained: reads the instances directory and the claude binary path
+# recorded by `/rcd init`, resolves <root>/<instance>, and starts claude there.
+# If that directory is itself a git repository top-level, on-demand sessions are
+# isolated in git worktrees; otherwise they share the directory. No external
+# helper script. ($$ is systemd's escape for a literal $; %i/%H are specifiers.)
+ExecStart=/bin/sh -c 'root=$$(cat "$$HOME/.config/rcd/root" 2>/dev/null); [ -n "$$root" ] || { echo "rcd: not initialized; run /rcd init" >&2; exit 1; }; bin=$$(cat "$$HOME/.config/rcd/claude-bin" 2>/dev/null); [ -x "$$bin" ] || { echo "rcd: claude path missing or not executable; run /rcd init" >&2; exit 1; }; dir="$$root/%i"; mkdir -p "$$dir"; cd "$$dir" || exit 1; if [ "$$(git rev-parse --show-toplevel 2>/dev/null)" = "$$(pwd -P)" ]; then spawn=worktree; else spawn=same-dir; fi; exec "$$bin" remote-control --name "%H-%i-base" --remote-control-session-name-prefix "%H-%i" --permission-mode acceptEdits --spawn "$$spawn"'
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=control-group
+# `claude` is exec'd via the absolute path recorded by `/rcd init`. PATH here only
+# needs `git` and the shell; adjust if `git` lives elsewhere.
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
