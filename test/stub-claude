@@ -1,0 +1,18 @@
+#!/bin/sh
+# Test double for the real `claude` binary.
+# The unit execs "$claude-bin remote-control ...". This stub records how it was
+# invoked (argv, working directory, RCD_INSTANCE) so tests can assert on it,
+# without needing a real Claude install or auth.
+#
+# Env:
+#   RCD_STUB_RECORD  where to write the record (default: $HOME/.rcd-stub-record)
+#   RCD_STUB_ONESHOT if set, record then exit 0 (logic test). Otherwise stay
+#                    alive so a systemd service sees it as running (service test).
+rec="${RCD_STUB_RECORD:-$HOME/.rcd-stub-record}"
+{
+  printf 'ARGV: %s\n' "$*"
+  printf 'CWD: %s\n' "$(pwd -P)"
+  printf 'RCD_INSTANCE: %s\n' "${RCD_INSTANCE:-}"
+} > "$rec"
+[ -n "${RCD_STUB_ONESHOT:-}" ] && exit 0
+while : ; do sleep 3600; done
