@@ -97,5 +97,5 @@ note "run them interactively per docs/manual-acceptance.md."
 
 echo
 echo "acceptance(auto): $pass passed, $fail failed"
-echo "services left running for the human-only checks (see host script output)."
+echo "(test units disabled after each check; live-session / on-demand checks need a full login — see host output)"
 [ "$fail" -eq 0 ]
