@@ -21,11 +21,15 @@ note(){ printf '  -- %s\n' "$1"; }
 [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && \
   systemctl --user import-environment CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
 
-# allowed-tools mirror the skill's frontmatter so headless `-p` runs the skill's
-# systemctl/mkdir/etc. without permission prompts — NO --dangerously-skip-permissions.
-AT='Bash(systemctl --user *) Bash(systemd-run --user *) Bash(journalctl --user *) Bash(loginctl enable-linger *) Bash(mkdir -p *) Bash(cp *) Bash(cat *) Bash(test *) Bash(basename *) Bash(command -v *) Bash(pwd *) Bash(pwd)'
+# Pre-approve exactly the skill's declared allowed-tools so headless `-p` runs
+# its systemctl/mkdir/etc. without prompts — NO --dangerously-skip-permissions.
+# Passed as a SINGLE quoted --settings JSON value: --allowedTools is variadic, so
+# an unquoted space-separated list word-splits (e.g. "Bash(systemctl --user *)"
+# becomes several argv tokens), the variadic stops at the first `--…` token, and
+# the "/rcd …" prompt gets swallowed — Claude then exits without running anything.
+SETTINGS='{"permissions":{"allow":["Bash(systemctl --user *)","Bash(systemd-run --user *)","Bash(journalctl --user *)","Bash(loginctl enable-linger *)","Bash(mkdir -p *)","Bash(cp *)","Bash(cat *)","Bash(test *)","Bash(basename *)","Bash(command -v *)","Bash(pwd *)","Bash(pwd)"]}}'
 rcd(){ # headless `/rcd <args>` in the current directory
-  claude -p --plugin-dir "$PLUGIN" --permission-mode acceptEdits --allowedTools $AT "/rcd $*" 2>&1
+  claude -p --plugin-dir "$PLUGIN" --permission-mode acceptEdits --settings "$SETTINGS" "/rcd $*" 2>&1
 }
 
 # --- auth + plugin load (the core "works in Claude Code" signals) ---
