@@ -70,17 +70,25 @@ rc=$?
 
 cat <<EOF
 
-== container left running for the two human-only checks ==
-1) On-demand/worktree RCD_INSTANCE + session-name separator (the parts no stub
-   can cover): in claude.ai/code (web or phone app), open a NEW session on the
-   instance shown as 'rcdtest-host-rcdtest-repo-base'. In that session run:
-       echo "\$RCD_INSTANCE"        # expect: rcdtest-repo
-   and confirm its display name reads  rcdtest-host-rcdtest-repo-<auto>  ('-' separated).
-2) Optionally exercise the typed-confirm verbs interactively:
-       docker exec -it -u rcd $CNAME bash -lc 'claude --plugin-dir /mnt/rcd'
-   then try  /rcd stop rcdtest-self ,  /rcd destroy ... ,  /rcd restart-all .
-3) Tear down when done (the host was never touched):
-       $0 --teardown
-   and delete the 'rcdtest-host-*' sessions left in claude.ai/code.
+== what the auto run covered (setup-token is enough) ==
+plugin loads, /rcd resolves, and Claude follows SKILL.md: init records root +
+claude-bin and installs the unit, /rcd start creates <root>/<name> and enables
+the unit, and an invalid name is refused. The live remote-control base session
+is NOT covered here — a setup-token is inference-scope and cannot run
+\`claude remote-control\`; its runtime --spawn/--name/RCD_INSTANCE args are
+already verified deterministically by test/service.sh.
+
+== optional, only if you want to check on-demand inheritance + the session name ==
+This needs a full-scope login (not a setup-token), and still needs the app:
+   docker exec -it -u rcd $CNAME bash -lc 'claude auth login'         # full-scope
+   docker exec -it -u rcd $CNAME bash -lc 'claude --plugin-dir /mnt/rcd'  # then: /rcd start rcdtest-repo
+Then from claude.ai/code open a session on 'rcdtest-host-rcdtest-repo-base',
+run  echo "\$RCD_INSTANCE"  (expect rcdtest-repo) and confirm the name reads
+rcdtest-host-rcdtest-repo-<auto> ('-' separated). The typed-confirm verbs
+(stop/destroy/restart-all SELF) can also be tried in that interactive session.
+
+== teardown (the host was never touched) ==
+   $0 --teardown
+and delete any 'rcdtest-host-*' sessions in claude.ai/code.
 EOF
 exit "$rc"

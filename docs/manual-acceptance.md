@@ -45,20 +45,27 @@ The container does sign in to a real Claude account, so its disposable
 `rcdtest-host-*` sessions appear in that account's claude.ai/code list. Delete
 them afterwards (or use a separate test account).
 
-## Prerequisite — the one thing you provide
+## Prerequisite — what you provide
 
-A long-lived auth token (requires a Claude subscription). On a machine already
-signed in:
+The whole run is manual; the aim is to keep *your* steps minimal.
+
+For the standard run, a long-lived token (requires a Claude subscription). On a
+machine already signed in:
 
 ```sh
-claude setup-token            # prints a token
-export CLAUDE_CODE_OAUTH_TOKEN=<that token>
+claude setup-token                     # prints a token
+export CLAUDE_CODE_OAUTH_TOKEN=<token>
 ```
 
 The driver passes it through; it is never written to disk. (If your `claude`
 version names the variable differently, check `claude setup-token` output.)
 
-## Procedure (one command + two human checks)
+A `setup-token` is **inference-scope**: enough to run the skill and assert its
+behaviour, but it **cannot run `claude remote-control`** — that needs a
+full-scope `claude auth login`. So the live base session is exercised only in the
+optional Tier B below.
+
+## Procedure — the standard run (setup-token)
 
 ```sh
 export CLAUDE_CODE_OAUTH_TOKEN=<token>
@@ -66,35 +73,23 @@ export CLAUDE_CODE_OAUTH_TOKEN=<token>
 ```
 
 The driver builds the image, boots the container, and runs `in-container.sh`,
-which exercises the **real skill path** and asserts the result:
+which exercises the **real skill path** and asserts:
 
 - `claude authenticated` and **`/rcd` resolves to the plugin** (verb table).
-- `/rcd init` records the root and installs the unit.
-- `/rcd start` for three directory conditions, checked against each unit's real
-  `/proc/<pid>/cmdline` and `environ`:
-  - empty dir → `--spawn same-dir`
-  - child of a parent repo → `--spawn same-dir` (does not engulf the parent)
-  - dir that is itself a git top-level → `--spawn worktree`
-  - correct `--name rcdtest-host-<name>-base` and `RCD_INSTANCE=<name>` on the base
+- **`/rcd init`** records the root + `claude-bin` and installs the unit
+  (`daemon-reload` included) — the real `${CLAUDE_PLUGIN_ROOT}` substitution and
+  the `~/.config` writes actually happen.
+- **`/rcd start`** for three directory conditions creates `<root>/<name>` and
+  enables the unit: an empty dir, a child of a parent repo, and a dir that is
+  itself a git top-level.
 - An invalid name (`../evil`) transcript is printed for you to confirm Claude
   refused it (model judgement, not auto-graded).
 
-Then do the two human-only checks the driver prints:
-
-1. **On-demand inheritance + name (gaps #1, #2).** In claude.ai/code, open a new
-   session on `rcdtest-host-rcdtest-repo-base`; in it run `echo "$RCD_INSTANCE"`
-   (expect `rcdtest-repo`) and confirm the session name is
-   `rcdtest-host-rcdtest-repo-<auto>` with `-` separators. If `RCD_INSTANCE` is
-   empty there, the env is **not** inherited into on-demand sessions → that is a
-   defect: switch to the spec's SELF-detection fallback (worktree-metadata
-   lookup).
-2. **Typed-confirm verbs (optional, needs a TTY).**
-   ```sh
-   docker exec -it -u rcd rcd-acceptance-run bash -lc 'claude --plugin-dir /mnt/rcd'
-   ```
-   Then try `/rcd stop rcdtest-self`, `/rcd destroy …`, `/rcd restart-all` and
-   confirm SELF is refused, the typed confirmation is required, and `restart-all`
-   defers SELF (detached).
+The unit's runtime args (`--spawn same-dir`/`worktree`, `--name …-base`,
+`RCD_INSTANCE`) are **not** re-checked here — a setup-token can't keep the base
+session alive, and those are already verified deterministically by
+`test/service.sh` (stub). When the base session isn't live the driver prints a
+note instead of failing.
 
 Tear down (the host was never touched):
 
@@ -102,7 +97,30 @@ Tear down (the host was never touched):
 ./test/acceptance/run-acceptance.sh --teardown
 ```
 
-and delete the leftover `rcdtest-host-*` sessions in claude.ai/code.
+and delete any leftover `rcdtest-host-*` sessions in claude.ai/code.
+
+## Optional Tier B — live session, on-demand inheritance, display name
+
+Run this **only** to verify the parts that need a live `claude remote-control`
+session, and **only when those behaviours changed** — it needs a full-scope
+login (not a setup-token) and still needs the app, so it costs more of your time.
+
+```sh
+docker exec -it -u rcd rcd-acceptance-run bash -lc 'claude auth login'        # full-scope
+docker exec -it -u rcd rcd-acceptance-run bash -lc 'claude --plugin-dir /mnt/rcd'
+#   in that session: /rcd start rcdtest-repo
+```
+
+Then, in claude.ai/code, open a new session on `rcdtest-host-rcdtest-repo-base`:
+
+1. **On-demand inheritance + name.** Run `echo "$RCD_INSTANCE"` (expect
+   `rcdtest-repo`) and confirm the session name reads
+   `rcdtest-host-rcdtest-repo-<auto>` with `-` separators. If `RCD_INSTANCE` is
+   empty there, the env is **not** inherited into on-demand sessions → defect:
+   switch to the spec's SELF-detection fallback (worktree-metadata lookup).
+2. **Typed-confirm verbs.** In the interactive session try `/rcd stop
+   rcdtest-self`, `/rcd destroy …`, `/rcd restart-all`; confirm SELF is refused,
+   the typed confirmation is required, and `restart-all` defers SELF (detached).
 
 ## Relation to the detailed plan
 
