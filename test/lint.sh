@@ -29,6 +29,16 @@ sh -n -c "$body" 2>/dev/null && ok "unit inline shell parses" || ng "unit inline
 # --- allowed-tools covers commands used in the body ---
 bash test/check-allowed-tools.sh "$SKILL" >/dev/null 2>&1 && ok "allowed-tools covers body commands" || { ng "allowed-tools coverage"; bash test/check-allowed-tools.sh "$SKILL" | sed 's/^/    /'; }
 
+# --- bundled-file references must use the substitutable ${CLAUDE_PLUGIN_ROOT} ---
+# Claude Code substitutes ${CLAUDE_PLUGIN_ROOT} inline in skill content, but the
+# unbraced $CLAUDE_PLUGIN_ROOT is NOT substituted and is absent from the skill's
+# Bash environment, so it resolves to nothing and bundled files can't be found.
+if grep -qE '\$CLAUDE_PLUGIN_ROOT' "$SKILL"; then
+  ng "SKILL uses unbraced \$CLAUDE_PLUGIN_ROOT; use \${CLAUDE_PLUGIN_ROOT} (only the braced form is substituted)"
+else
+  ok "no unbraced \$CLAUDE_PLUGIN_ROOT in SKILL"
+fi
+
 # --- optional external linters (opt-in; they fetch npm packages) ---
 run_external(){ [ -n "${RCD_LINT_EXTERNAL:-}" ] || command -v "$1" >/dev/null 2>&1; }
 if run_external skill-tools; then

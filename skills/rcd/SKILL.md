@@ -62,7 +62,7 @@ Sets up rcd. **Run from the directory you want as the instances directory** — 
 2. Resolve the root: `pwd` (use `pwd -P` value as the absolute path).
 3. **If already initialized** (`~/.config/rcd/root` exists) **and the recorded root differs from the current directory:** show the old root and warn that changing it repoints where *all* existing instances look for their working directory. Require the user to type `change-root` exactly to proceed; otherwise keep the old root (still (re)install the unit and refresh `claude-bin` below).
 4. Record the root: write the absolute current directory into `~/.config/rcd/root` (single line). Use: `pwd -P > ~/.config/rcd/root`.
-5. Install the template unit (current plugin version): `mkdir -p ~/.config/systemd/user && cp "$CLAUDE_PLUGIN_ROOT/units/claude-remote-control@.service" ~/.config/systemd/user/claude-remote-control@.service`.
+5. Install the template unit (current plugin version): `mkdir -p ~/.config/systemd/user && cp "${CLAUDE_PLUGIN_ROOT}/units/claude-remote-control@.service" ~/.config/systemd/user/claude-remote-control@.service`. (`${CLAUDE_PLUGIN_ROOT}` is the plugin's install dir; Claude Code substitutes the braced form inline — do not write it unbraced.)
 6. `systemctl --user daemon-reload`.
 7. Report: the recorded root, the resolved claude path, that the unit is installed, and that `/rcd start <name>` is now usable. Mention (optional) `loginctl enable-linger "$USER"` to keep instances running after logout, and that after a plugin **or** claude update re-running `/rcd init` refreshes the unit and the recorded claude path.
 
