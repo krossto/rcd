@@ -3,7 +3,7 @@ name: rcd
 description: Manage per-name Claude Code remote-control instances as systemd user services. Verbs (init/start/stop/destroy/list/logs/restart-all) wrap `systemctl --user` and `journalctl --user`. Use when setting up rcd for the first time (`init`), starting/stopping/inspecting/destroying an instance, or restarting every instance after a `claude` CLI auto-update. Includes self-protection when run from inside an instance (e.g. the `hq` control instance).
 argument-hint: <verb> [name]
 disable-model-invocation: true
-allowed-tools: Bash(systemctl --user *) Bash(systemd-run --user *) Bash(journalctl --user *) Bash(loginctl enable-linger *) Bash(mkdir -p *) Bash(cp *) Bash(cat *) Bash(test *) Bash(basename *) Bash(command -v *) Bash(pwd *) Bash(pwd)
+allowed-tools: Bash(systemctl --user *) Bash(systemd-run --user *) Bash(journalctl --user *) Bash(loginctl enable-linger *) Bash(mkdir -p *) Bash(cp *) Bash(printf *) Bash(cat *) Bash(test *) Bash(basename *) Bash(command -v *) Bash(pwd *) Bash(pwd)
 ---
 
 # rcd — Claude Remote-Control Instance Lifecycle
