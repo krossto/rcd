@@ -25,8 +25,14 @@ folder-trust prompt. Then type /exit.
 EOF
 docker exec -it -u rcd -e RCD_ACCEPTANCE_MODEL "$C" bash -lc '
   export XDG_RUNTIME_DIR=/run/user/1000
-  mkdir -p ~/rcdtest-root/rcdtest-live && git -C ~/rcdtest-root/rcdtest-live init -q
-  cd ~/rcdtest-root/rcdtest-live && claude --plugin-dir /mnt/rcd ${RCD_ACCEPTANCE_MODEL:+--model "$RCD_ACCEPTANCE_MODEL"}'
+  d=~/rcdtest-root/rcdtest-live
+  mkdir -p "$d" && git -C "$d" init -q
+  # The base runs --spawn worktree (the dir is a git top-level), and `git worktree
+  # add` needs a HEAD commit. A freshly `git init`-ed repo has none, so on-demand
+  # session spawns would hang. Seed one empty commit so worktrees can be created.
+  git -C "$d" rev-parse HEAD >/dev/null 2>&1 || \
+    git -C "$d" -c user.email=rcd@local -c user.name=rcd commit --allow-empty -q -m "rcd live fixture: worktree base"
+  cd "$d" && claude --plugin-dir /mnt/rcd ${RCD_ACCEPTANCE_MODEL:+--model "$RCD_ACCEPTANCE_MODEL"}'
 
 # Step 2: init (records real claude-bin) + start the live base session.
 echo "== live step 2/3: start the base session =="
