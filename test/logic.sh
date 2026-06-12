@@ -34,12 +34,18 @@ setup(){ # create config pointing root at <home>/insroot with the stub
 }
 argv(){ sed -n 's/^ARGV: //p' "$1/rec" 2>/dev/null; }
 
-# 1) instance dir is itself a git repo top -> worktree
-h="$(mktemp -d)"; setup "$h"; git -C "$h/insroot/repo-top" init -q 2>/dev/null || { mkdir -p "$h/insroot/repo-top"; git -C "$h/insroot/repo-top" init -q; }
+# 1) instance dir is a git repo top WITH a commit -> worktree
+h="$(mktemp -d)"; setup "$h"; mkdir -p "$h/insroot/repo-top"; git -C "$h/insroot/repo-top" init -q
+git -C "$h/insroot/repo-top" -c user.email=t@t -c user.name=t commit --allow-empty -q -m init
 rc="$(launch repo-top "$h")"; a="$(argv "$h")"
-[ "$rc" = 0 ] && echo "$a" | grep -q -- '--spawn worktree' && ok "git-top -> --spawn worktree" || ng "git-top -> worktree (rc=$rc argv=$a)"
+[ "$rc" = 0 ] && echo "$a" | grep -q -- '--spawn worktree' && ok "git-top(committed) -> --spawn worktree" || ng "git-top -> worktree (rc=$rc argv=$a)"
 echo "$a" | grep -q -- "--name $HOST-repo-top-base" && ok "git-top -> --name $HOST-repo-top-base" || ng "git-top naming ($a)"
 echo "$a" | grep -q -- "--remote-control-session-name-prefix $HOST-repo-top" && ok "git-top -> prefix" || ng "git-top prefix ($a)"
+
+# 1b) git top-level but NO commits (empty repo) -> same-dir (worktree add needs HEAD)
+h="$(mktemp -d)"; setup "$h"; mkdir -p "$h/insroot/empty-repo"; git -C "$h/insroot/empty-repo" init -q
+rc="$(launch empty-repo "$h")"; a="$(argv "$h")"
+[ "$rc" = 0 ] && echo "$a" | grep -q -- '--spawn same-dir' && ok "empty-git -> --spawn same-dir" || ng "empty-git -> same-dir (rc=$rc argv=$a)"
 
 # 2) instance dir is a plain subdir inside a parent repo -> same-dir (no worktree)
 h="$(mktemp -d)"; setup "$h"; git -C "$h/insroot" init -q; mkdir -p "$h/insroot/child"

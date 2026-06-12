@@ -62,9 +62,10 @@ assert_inst(){ # $1=instance  $2=expected --spawn mode
 # A) plain instance directory -> same-dir
 assert_inst rcdtest-svc same-dir
 
-# B) instance directory that is itself a git top-level -> worktree
+# B) instance directory that is a git top-level WITH a commit -> worktree
 mkdir -p "$HOME/insroot/rcdtest-wt"
 git -C "$HOME/insroot/rcdtest-wt" init -q
+git -C "$HOME/insroot/rcdtest-wt" -c user.email=rcd@local -c user.name=rcd commit --allow-empty -q -m "rcd service fixture: worktree base"
 assert_inst rcdtest-wt worktree
 
 echo "service(in-container): $([ "$fail" -eq 0 ] && echo OK || echo FAILED)"
