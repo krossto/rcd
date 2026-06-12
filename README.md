@@ -71,10 +71,12 @@ To keep instances running after you log out, enable lingering once:
 ## Naming and worktrees
 
 - The base session is `<hostname>-<name>-base`, so it is easy to spot in the list.
-- If `<root>/<name>` is **itself a git repository top-level**, on-demand sessions
-  are isolated in their own **git worktrees**. Empty or non-git directories are
-  not forced into worktree mode — `git init` / `git clone` inside the directory to
-  enable it.
+- If `<root>/<name>` is **a git repository top-level with at least one commit**,
+  on-demand sessions are isolated in their own **git worktrees**. Non-git
+  directories — or a freshly `git init`-ed repo with no commits yet — use same-dir.
+  Use `git clone`, or `git init` plus an initial commit, to enable worktree mode.
+  The mode is fixed when the instance starts; restart it after the first commit to
+  switch.
 
 ## Safety
 

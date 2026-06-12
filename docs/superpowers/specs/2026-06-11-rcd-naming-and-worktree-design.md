@@ -35,9 +35,9 @@ Claude Code リモートコントロールは、1 つのディレクトリで常
 
 ### worktree の自動判定
 
-- `<root>/<name>` が **それ自身 git リポジトリの最上位**（`git -C <dir> rev-parse --show-toplevel` == `<dir>`）の時のみ `--spawn worktree`。
-- 空ディレクトリや非 git、あるいは単に親リポジトリの作業ツリー内にあるだけの場合は **`--spawn same-dir`**（親リポジトリを巻き込まない）。
-- worktree 隔離したいプロジェクトは、そのディレクトリ内で `git init` / `git clone` する。
+- `<root>/<name>` が **それ自身 git リポジトリの最上位**（`git -C <dir> rev-parse --show-toplevel` == `<dir>`）**かつ HEAD コミットを持つ**時のみ `--spawn worktree`（`git worktree add` は HEAD コミット必須のため）。
+- 空ディレクトリ・非 git・**コミット0の空リポ**、あるいは単に親リポジトリの作業ツリー内にあるだけの場合は **`--spawn same-dir`**（親リポジトリを巻き込まない）。
+- worktree 隔離したいプロジェクトは、そのディレクトリ内で `git clone` する、または `git init` ＋初回コミットする。spawn mode はサービス起動時に評価されるため、初回コミット後はサービスを再起動して切り替える。
 
 ### 自己完結 unit（同梱・案A）
 
@@ -56,7 +56,7 @@ unit の中核（`ExecStart`、抜粋）:
 root=$(cat "$HOME/.config/rcd/root"); [ -n "$root" ] || exit 1
 bin=$(cat "$HOME/.config/rcd/claude-bin"); [ -n "$bin" ] || bin=claude
 dir="$root/<name>"; mkdir -p "$dir"; cd "$dir" || exit 1
-if [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]; then spawn=worktree; else spawn=same-dir; fi
+if [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ] && git rev-parse --verify -q HEAD >/dev/null 2>&1; then spawn=worktree; else spawn=same-dir; fi
 exec "$bin" remote-control \
   --name "<hostname>-<name>-base" \
   --remote-control-session-name-prefix "<hostname>-<name>" \

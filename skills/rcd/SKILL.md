@@ -15,7 +15,7 @@ Manages systemd user instances of `claude-remote-control@.service`.
 - Template unit (installed by `init`): `~/.config/systemd/user/claude-remote-control@.service`
 - **Instances directory** (the "root"): recorded by `init` in `~/.config/rcd/root`. Each instance lives at `<root>/<name>`.
 - Each instance's base session shows up in claude.ai/code as `<hostname>-<name>-base`; its on-demand sessions are prefixed `<hostname>-<name>-`.
-- If `<root>/<name>` is itself a git repository top-level, on-demand sessions are isolated in git worktrees; otherwise they share the directory.
+- If `<root>/<name>` is a git repository top-level **with at least one commit**, on-demand sessions are isolated in git worktrees; otherwise (non-git, a subdirectory of a parent repo, or a repo with no commits yet) they share the directory (same-dir). The mode is decided when the unit starts, so to move a running instance from same-dir to worktree after its first commit, restart it (`/rcd stop <name>` then `/rcd start <name>`, or `/rcd restart-all`).
 - `hq` (headquarters) is a common convention for an always-on **control instance** — one you connect to (e.g. from the phone app) to run `/rcd` and manage the others. It is an ordinary instance; nothing reserves the name. It is optional.
 
 ## Self-instance detection (run this FIRST for every invocation)
@@ -73,7 +73,7 @@ Sets up rcd. **Run from the directory you want as the instances directory** — 
 2. Compute and create the directory: `root=$(cat ~/.config/rcd/root)`, then `mkdir -p "$root/<name>"`.
 3. `systemctl --user enable --now claude-remote-control@<name>.service`.
 4. `systemctl --user status claude-remote-control@<name>.service --no-pager | head -15`.
-5. Report running/failed and the directory (`<root>/<name>`). Note whether it will use worktrees (the directory is a git repo top-level) or same-dir. If failed, suggest `/rcd logs <name>`.
+5. Report running/failed and the directory (`<root>/<name>`). Note whether it will use worktrees (the directory is a git repo top-level **with a commit**) or same-dir. If failed, suggest `/rcd logs <name>`.
 6. **First-run note (trust + remote-control consent):** The unit launches `claude remote-control` non-interactively (systemd, no TTY), so it cannot answer two first-run prompts and will fail to start until both are satisfied: (a) the **workspace-trust** dialog for a newly created instance directory (per directory), and (b) the one-time **"Enable Remote Control?"** consent (per machine). Tell the user, before the first `/rcd start <name>`:
    - **Trust (per directory):** in `<root>/<name>`, run an interactive `claude` once and accept the folder-trust prompt.
    - **Consent (once per machine):** accept it from a **non-instance directory** — e.g. `cd ~ && claude remote-control`, answer `y` to "Enable Remote Control?", then press Ctrl+C. Do **not** run this consent step inside `<root>/<name>`: a remote-control session started there registers a relay environment for that directory, which the instance's base session then joins, so claude.ai/code would show the instance under the temporary consent name instead of `<hostname>-<name>-base`. The leftover one-off consent session can be deleted in claude.ai/code.
