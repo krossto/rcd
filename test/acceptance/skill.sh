@@ -28,6 +28,7 @@ trap 'rcd_teardown "$C"' EXIT
 # headless /rcd helper. Permissions mirror a consenting user (spec §6-5):
 ALLOW='Bash(systemctl --user *),Bash(systemd-run --user *),Bash(journalctl --user *),Bash(loginctl enable-linger *),Bash(mkdir *),Bash(cp *),Bash(cat *),Bash(test *),Bash(basename *),Bash(command -v *),Bash(pwd *),Bash(pwd),Bash(printf *)'
 ex(){ docker exec -u rcd -e "$TOK=${!TOK}" "$C" "$@"; }
+cjq(){ docker exec -i "$C" jq "$@"; }   # jq runs INSIDE the container (host needs no jq)
 rcd(){ # headless `/rcd <args>` in dir $1, remaining args = verb...
   local dir="$1"; shift
   ex bash -lc "export XDG_RUNTIME_DIR=/run/user/1000; cd '$dir'; \
@@ -37,10 +38,10 @@ rcd(){ # headless `/rcd <args>` in dir $1, remaining args = verb...
 
 # #1 load + /rcd resolution via system/init (spec §4 skill signal, §6 / research memo)
 init_json="$(ex bash -lc "claude -p '/rcd' --plugin-dir $PLUGIN --bare --output-format stream-json --verbose 2>/dev/null | head -1")"
-echo "$init_json" | jq -e '(.plugins // [] | map(.name) | index("rcd")) and ((.plugin_errors // []) | length == 0)' >/dev/null 2>&1 \
+echo "$init_json" | cjq -e '(.plugins // [] | map(.name) | index("rcd")) and ((.plugin_errors // []) | length == 0)' >/dev/null 2>&1 \
   && ok "plugin 'rcd' loaded (system/init.plugins, no plugin_errors)" \
   || { ng "plugin not loaded per system/init"; echo "$init_json" | head -c 400; }
-echo "$init_json" | jq -e '(.slash_commands // []) | any(. == "rcd" or (endswith(":rcd")))' >/dev/null 2>&1 \
+echo "$init_json" | cjq -e '[.slash_commands[]? | select(type == "string")] | any(. == "rcd" or endswith(":rcd"))' >/dev/null 2>&1 \
   && ok "/rcd present in system/init.slash_commands" \
   || ng "/rcd not in slash_commands"
 
