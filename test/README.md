@@ -21,7 +21,7 @@ never touched.
 | `lint` | Full (CI) | The skill/plugin **definition**: frontmatter, `allowed-tools` coverage, the unit's inline shell parses and wires `RCD_INSTANCE`, bundled paths use `${CLAUDE_PLUGIN_ROOT}`. |
 | `logic` | Full (CI) | The unit's **launch logic** in isolation: worktree-vs-same-dir, `--name` / session-name prefix, and the uninitialised / missing-claude guards. |
 | `service` | Full (Docker) | The unit **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for same-dir and worktree. |
-| `skill` | Semi | The real Claude **follows `SKILL.md`**: plugin loads, `/rcd` resolves, `init` records config + installs the unit, `start` creates the dir + enables the unit, invalid names refused. |
+| `skill` | Manual (machine-judged) | The real Claude **follows `SKILL.md`**: plugin loads, `/rcd` resolves, `init` records config + installs the unit, `start` creates the dir + enables the unit, invalid names refused. |
 | `guards` | Manual | **Destructive-verb protections** that need a TTY: typed confirmations (`destroy` / `restart-all`) and SELF refusal, against stub-backed fixture units. |
 | `live` | Manual | The **live `claude remote-control` runtime** a stub can't reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions (G4), and the session-name format (G5). |
 
@@ -42,7 +42,7 @@ Hermetic (stub `claude`); run on every change — the continuous safety net.
 `lint` also runs the external linters `skill-tools` and `claudelint` when present
 (or with `RCD_LINT_EXTERNAL=1`); they fetch npm packages, so they are opt-in.
 
-## Semi-automatic — `skill`
+## Manual — `skill` (machine-judged)
 
 A `setup-token` (inference scope) is enough.
 
