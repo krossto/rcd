@@ -28,8 +28,8 @@ are never touched.
 | `lint` | **Full** (CI) | The skill/plugin **definition** is well-formed: frontmatter, `allowed-tools` covers the commands used, the unit's inline shell parses, `RCD_INSTANCE` is wired, bundled paths use the substitutable `${CLAUDE_PLUGIN_ROOT}` form. | Every change. |
 | `logic` | **Full** (CI) | The unit's **launch logic** in isolation: the worktree-vs-same-dir decision, the `--name` / session-name prefix, and the not-initialised / missing-claude guards. | Every change. |
 | `service` | **Full** (needs Docker) | The unit actually **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for both same-dir and worktree directories. | Every change, where Docker is available. |
-| `skill` | **Semi** (author runs) | The real Claude **follows `SKILL.md`**: the plugin loads, `/rcd` resolves, `init` records config and installs the unit, `start` creates the instance dir and enables the unit, and invalid names are refused. | The skill prose, the plugin packaging, or the `claude` CLI changed (see below). |
-| `live` | **Manual** (author runs) | The **live `claude remote-control` runtime** the stub cannot reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the claude.ai/code session-name format, and SELF-refusal / typed confirmations in a live session. | Establishing a baseline, or the unit's identity/naming wiring or the external `claude`/claude.ai behaviour changed (see below). |
+| `skill` | **Semi** | The real Claude **follows `SKILL.md`**: the plugin loads, `/rcd` resolves, `init` records config and installs the unit, `start` creates the instance dir and enables the unit, and invalid names are refused. | The skill prose, the plugin packaging, or the `claude` CLI changed (see below). |
+| `live` | **Manual** | The **live `claude remote-control` runtime** the stub cannot reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the claude.ai/code session-name format, and SELF-refusal / typed confirmations in a live session. | Establishing a baseline, or the unit's identity/naming wiring or the external `claude`/claude.ai behaviour changed (see below). |
 
 `skill` and `live` are the two modes of the acceptance harness
 (`test/acceptance/`): the same run drives the `skill` checks automatically and
@@ -76,21 +76,58 @@ name is refused) are **printed for you to read** rather than auto-graded.
 ## Manual — `live`
 
 **Purpose:** verify the live `claude remote-control` behaviour that no stub can
-reproduce. This needs a **full `claude auth login`** (not a `setup-token`) and
-the claude.ai/code app, because it exercises the relay and spawned sessions.
+reproduce. It needs a **full `claude auth login`** (a `setup-token` is
+inference-only and cannot run `claude remote-control`) plus the claude.ai/code
+app, because it exercises the relay and the sessions it spawns.
 
-Run the standard `skill` flow first, then, in the container:
+**Procedure.** Reuses the running container `rcd-acceptance-run` and the rcd
+config recorded by a prior `skill` run; `rcd` is the in-container user (uid 1000).
 
-```sh
-docker exec -it -u rcd rcd-acceptance-run bash -lc 'claude auth login'
-docker exec -it -u rcd rcd-acceptance-run bash -lc 'claude --plugin-dir /mnt/rcd'
-#   then in that session: /rcd start <name>
-```
+1. Log in with a full-scope token, following the printed URL / device prompts:
 
-From claude.ai/code, open a session on the instance and confirm: `RCD_INSTANCE`
-is inherited into the on-demand/worktree session (the basis for self-detection),
-the session name has the expected `-`-separated format, and SELF `stop`/`destroy`
-/`restart-all` behave as specified.
+   ```sh
+   docker exec -it -u rcd rcd-acceptance-run claude auth login
+   ```
+
+2. Start an instance whose directory is a git top-level (so on-demand sessions
+   use a worktree) and confirm the base session actually came up:
+
+   ```sh
+   docker exec -it -u rcd rcd-acceptance-run bash -lc '
+     export XDG_RUNTIME_DIR=/run/user/1000
+     mkdir -p ~/rcdtest-root/rcdtest-live && git -C ~/rcdtest-root/rcdtest-live init -q
+     systemctl --user enable --now claude-remote-control@rcdtest-live.service
+     sleep 3; systemctl --user is-active claude-remote-control@rcdtest-live.service'
+   ```
+
+   Expect `active`. If it stays `activating` (auto-restart loop), the login did
+   not take — redo step 1.
+
+3. In claude.ai/code (web or app), find the base session
+   `rcdtest-host-rcdtest-live-base` and open a **new** session on that instance.
+   This is what spawns an on-demand (worktree) session.
+
+4. In that on-demand session, check the two things the stub cannot:
+
+   - `echo "$RCD_INSTANCE"` must print `rcdtest-live`. This confirms the env is
+     inherited into on-demand/worktree sessions — the basis for self-detection.
+     If it is empty, the env is **not** inherited → defect.
+   - The session's display name reads `rcdtest-host-rcdtest-live-<auto>`, with
+     `-` separators.
+
+5. Still in that on-demand session, exercise self-protection:
+
+   - `/rcd stop rcdtest-live` and `/rcd destroy rcdtest-live` must both **refuse**
+     (you are inside SELF).
+   - `/rcd restart-all` restarts the others but defers SELF (a detached restart).
+
+6. Tear down and remove the disposable sessions:
+
+   ```sh
+   ./test/acceptance/run-acceptance.sh --teardown
+   ```
+
+   then delete the leftover `rcdtest-host-*` sessions in claude.ai/code.
 
 **Run it when:**
 
