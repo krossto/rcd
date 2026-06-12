@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **SUPERSEDED NOTE (2026-06-12, post-execution):** This plan was executed, then acceptance on a real Claude found that the **interactive TUI cannot authenticate from a `setup-token`** (only headless `-p` can). The **`guards` unit therefore uses a full `claude auth login`, not a `setup-token`/`CLAUDE_CODE_OAUTH_TOKEN`.** Wherever Task 4 and the embedded README/runbook snippets below still show `setup-token` / `CLAUDE_CODE_OAUTH_TOKEN` / "inference" for `guards`, they are **stale** — follow the canonical sources instead: spec §4 `guards`, the actual `test/acceptance/guards.sh`, `docs/manual-acceptance.md`, and `test/README*.md`. Only `skill` (headless `-p`) stays on a `setup-token`. (Two other post-execution fixes also live only in the canonical files: the `skill` unit runs `jq` inside the container, and `SKILL.md` gained `Bash(printf *)` plus a single-token name rule.)
+
 **Goal:** spec `docs/superpowers/specs/2026-06-12-rcd-acceptance-units-design.md` に従い、実 Claude を要する受け入れ検証を独立実行できる3単位 `skill`/`guards`/`live` として `test/acceptance/` に再構築し、ドキュメントと SKILL.md 注記を更新する。
 
 **Architecture:** 全単位は「専用 HOME を持つ使い捨て privileged systemd Docker コンテナ内の実 Claude Code」を共有環境とし、差は経路（headless `-p` / 対話TTY / アプリ）と認証（inference / full login）だけ。共有の `Dockerfile`＋`lib.sh` を土台に、各単位スクリプトが**自前でコンテナ起動〜teardown まで完結**（単位間依存なし）。`skill` は機械判定で自動、`guards`/`live` はセットアップ＋対話/アプリの人手チェック。

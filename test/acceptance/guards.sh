@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
-# Unit `guards` — interactive, setup-token (spec §4 guards). Sets up two stub-backed
+# Unit `guards` — interactive, full login (spec §4 guards). Sets up two stub-backed
 # units (rcdtest-self, rcdtest-victim) so SELF detection and the destroy confirm
 # path can be exercised, then opens an interactive Claude for you to drive /rcd.
-# MANUAL acceptance only. Requires docker + CLAUDE_CODE_OAUTH_TOKEN (setup-token);
-# the interactive Claude authenticates via that inference token (no full login),
-# keeping guards in the inference tier. remote-control is NOT used here.
+# MANUAL acceptance only. Requires docker + a full `claude auth login`: the
+# interactive TUI cannot authenticate from a setup-token (only headless `-p` can),
+# so it runs the normal login onboarding. No app / no remote-control is used here.
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 C=rcd-acc-guards
-TOK=CLAUDE_CODE_OAUTH_TOKEN
 PLUGIN=/mnt/rcd
 rcd_need_docker
-[ -n "${!TOK:-}" ] || { echo "$TOK not set — run 'claude setup-token' and 'export $TOK=<token>'"; exit 1; }
 [ "${1:-}" = "--teardown" ] && { rcd_teardown "$C"; echo "guards: container removed"; exit 0; }
 rcd_build
 rcd_boot "$C"
@@ -39,9 +37,9 @@ cat <<EOF
 
 == guards: interactive checks (no app, no remote-control) ==
 A real interactive Claude Code (plugin loaded, RCD_INSTANCE=rcdtest-self) opens
-next. Authentication is supplied by CLAUDE_CODE_OAUTH_TOKEN — do NOT run a full
-\`claude auth login\` for this unit (that is only for \`live\`). First launch may
-ask for theme and folder trust; complete those. Then run these and confirm:
+next. Complete onboarding: choose a full \`claude auth login\` (the interactive
+TUI cannot authenticate from a setup-token) and accept the folder-trust prompt.
+Then run these and confirm:
 
   /rcd                         -> prints the verb table
   /rcd start ../evil           -> refused with the name rule (no systemctl)
@@ -54,7 +52,8 @@ ask for theme and folder trust; complete those. Then run these and confirm:
 
 Type /exit when done, then tear down:  $0 --teardown
 EOF
-# XDG_RUNTIME_DIR is required so the skill's `systemctl --user` finds the user bus;
-# the setup-token is passed so the session authenticates via inference (no login).
-docker exec -it -u rcd -e "$TOK=${!TOK}" -e RCD_INSTANCE=rcdtest-self -e RCD_ACCEPTANCE_MODEL "$C" \
+# XDG_RUNTIME_DIR is required so the skill's `systemctl --user` finds the user bus.
+# No token is injected: the interactive session authenticates via the full login
+# completed in onboarding.
+docker exec -it -u rcd -e RCD_INSTANCE=rcdtest-self -e RCD_ACCEPTANCE_MODEL "$C" \
   bash -lc 'export XDG_RUNTIME_DIR=/run/user/1000; cd ~/rcdtest-root && claude --plugin-dir /mnt/rcd ${RCD_ACCEPTANCE_MODEL:+--model "$RCD_ACCEPTANCE_MODEL"}'

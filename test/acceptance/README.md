@@ -11,7 +11,7 @@ with its own `HOME`; the host is never touched.
 | Unit | Run | Needs | Verifies |
 |---|---|---|---|
 | `skill` | `./test/acceptance/skill.sh` | docker + `CLAUDE_CODE_OAUTH_TOKEN` (setup-token) | plugin loads, `/rcd` resolves, `init`/`start` follow SKILL.md, invalid names refused (machine-judged) |
-| `guards` | `./test/acceptance/guards.sh` | docker + `CLAUDE_CODE_OAUTH_TOKEN` (setup-token) | typed confirmations + SELF refusal (interactive) |
+| `guards` | `./test/acceptance/guards.sh` | docker + full `claude auth login` | typed confirmations + SELF refusal (interactive) |
 | `live` | `./test/acceptance/live.sh` | docker + full `claude auth login` + app | `RCD_INSTANCE` inheritance into on-demand sessions, session-name format |
 
 Each script accepts `--teardown` to remove its container.

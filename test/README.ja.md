@@ -59,13 +59,12 @@ export CLAUDE_CODE_OAUTH_TOKEN=<token>
 
 ## 手動 — `guards`
 
-`setup-token`（inference スコープ）で足りる。スクリプトがインタラクティブな Claude
-セッションを開くので、表示されるチェックリストに従う。
+**full `claude auth login`** が必要。対話 TUI は setup-token では認証できず
+（headless `-p` のみ可）、通常のログイン onboarding に入る。スクリプトが対話 Claude
+セッションを開くので、onboarding でフルログインを選び、表示されるチェックリストに従う。
 
 ```sh
-claude setup-token                 # Claude サブスクリプションが必要
-export CLAUDE_CODE_OAUTH_TOKEN=<token>
-./test/acceptance/guards.sh
+./test/acceptance/guards.sh        # onboarding で full `claude auth login` を選ぶ
 ./test/acceptance/guards.sh --teardown
 ```
 

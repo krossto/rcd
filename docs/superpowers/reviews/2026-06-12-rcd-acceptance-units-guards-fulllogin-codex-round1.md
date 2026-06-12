@@ -1,0 +1,12 @@
+# Codex Review Judgment: rcd-acceptance-units-design — guards full-login change (round 1)
+
+- Target: docs/superpowers/specs/2026-06-12-rcd-acceptance-units-design.md
+- Round: 1
+- Codex thread_id: 019ebb01-5fa0-7900-b7d2-197c363cafac
+- overall: revise / confidence: 0.87
+- Summary: Review of the post-execution spec edit that moves `guards` from setup-token/inference to full `claude auth login`. Two acceptance-design gaps flagged. F1 (plan/spec contradiction on `guards` auth) accepted and fixed; F2 (invalid-name coverage for non-`start` verbs) rejected with reasoning.
+
+| ID | Severity | Finding (summary) | Decision | Reason |
+|---|---|---|---|---|
+| F1 | important | The related plan still describes `guards` as setup-token/inference, contradicting the spec's new full-login requirement (§6-1); an implementer re-following the plan recreates the known-bad design. | accept | Real inconsistency in a published repo. Fixed by a prominent **SUPERSEDED note** at the top of `plans/2026-06-12-rcd-acceptance-units.md` directing readers to the canonical sources (spec §4, the actual `test/acceptance/guards.sh`, `docs/manual-acceptance.md`, `test/README*.md`) for `guards` auth, and noting the two other post-execution fixes (container-side `jq`; `Bash(printf *)` + single-token name rule). Rewriting every stale embedded code block in the executed historical plan was judged over-restoration; the note resolves the contradiction unambiguously. |
+| F2 | important | `skill` invalid-name acceptance only covers `start`; `SKILL.md` validates names for all name-bearing verbs (`start`/`stop`/`destroy`/`logs`), so a regression that skips validation for the others could pass. | reject | Name validation is **dispatch-level (shared, before any verb logic)**. The only name-bearing verb that mutates the filesystem is `start` (`mkdir -p "$root/<name>"` — the actual path-traversal vector), which #4 already covers with `../evil`/`a b`/`foo@bar`. `stop`/`destroy`/`logs` pass the name only as a **systemd unit instance specifier** (`claude-remote-control@<name>.service`); a malformed name yields an invalid unit name that systemd/journalctl reject, with no filesystem-traversal side-effect — so the blast radius is far smaller and bounded by systemd's own unit-name validation. Expanding #4 to every verb multiplies real-Claude invocations for marginal coverage. If pursued later, a single `destroy` (destructive) invalid-name subcase would be the highest-value addition; recorded here as a possible future enhancement rather than a blocking spec change. |

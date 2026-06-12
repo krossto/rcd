@@ -47,13 +47,13 @@
 - **判定方法（#4）**: 拒否文言は advisory に留め、**副作用の差分で機械判定**する — 不正名（`../evil`・`a b`・`foo@bar` 等）の試行は **#3 の正当 `start` より前のサブケースで行う**か、各試行の直前に unit 一覧と `<root>` の状態を記録し、試行後に**変化していない**ことをアサートする（新規 unit が enable/start されず、対応する dir も作られない）。#3 で既に enable 済みの unit を巻き込まないようスコープする。
 - **いつ**: `SKILL.md` の文面（手順・名前ルール・同梱ファイル参照）変更時／プラグイン梱包（`plugin.json`・`marketplace.json`・構成・skill 名・unit 位置）変更時／`claude` CLI のメジャー級更新時。
 
-### 単位 `guards`（対話 TTY・inference・人判定）
-破壊的 verb の保護。headless では出来ない対話確認。
+### 単位 `guards`（対話 TTY・full login・人判定）
+破壊的 verb の保護。headless では出来ない対話確認。**当初は inference（setup-token）で対話を駆動する設計だったが、実測（2026-06-12, claude 2.1.175）で対話 TUI は setup-token では認証できず（headless `-p` のみ inference 可）、通常のログイン onboarding に入ることが判明したため full login に変更**。認証方式が変わっただけで、検証対象（typed-confirm / SELF 拒否）は認証と独立。
 
 | # | 検証項目 | 経路 | 認証 | 判定 |
 |---|---|---|---|---|
-| 5 | typed-confirm（`destroy`/`restart-all` の確認入力） | 対話 TTY | inference | 人 |
-| 6 | SELF 拒否（`stop`/`destroy` SELF の拒否、`restart-all` の SELF 後回し） | 対話 TTY | inference | 人 |
+| 5 | typed-confirm（`destroy`/`restart-all` の確認入力） | 対話 TTY | full login | 人 |
+| 6 | SELF 拒否（`stop`/`destroy` SELF の拒否、`restart-all` の SELF 後回し） | 対話 TTY | full login | 人 |
 
 - **フィクスチャ（2 unit）**: skill の SELF 確認は `systemctl --user list-units 'claude-remote-control@*'`（`--all` 無し）で候補 unit の存在を確かめるため、対象 unit が **active・listed** である必要がある。inference の実 claude では `claude remote-control` が起動できず unit が不安定（flap/failed）になるので、**`guards` の対象 unit はスタブ `claude-bin`（`test/stub-claude`）で起動して確実に active・listed にする**（`init` 後に `~/.config/rcd/claude-bin` をスタブへ差し替え）。`/rcd` を叩く対話セッションのみ実 claude を `--plugin-dir` で使う。SELF 拒否と destroy の確認経路は別 unit が要るため2つ用意する:
   - **`rcdtest-self`**（active・スタブ／対話セッションに `RCD_INSTANCE=rcdtest-self`）: #6 の SELF 拒否（`/rcd stop|destroy rcdtest-self` が**確認入力の前に**拒否）と `restart-all` の SELF 後回しを確認。
@@ -79,7 +79,7 @@
 
 ## 6. 設計が従うべき確定事実（本検証で判明）
 
-1. **`setup-token` は inference 専用**で `claude remote-control` を起動できない。よって `skill`/`guards` は inference で足り、`live` のみ full `claude auth login` を要する。
+1. **`setup-token`（`CLAUDE_CODE_OAUTH_TOKEN`）は inference 専用かつ headless `-p` のみで有効**。`claude remote-control` を起動できず、さらに**対話 TUI は setup-token で認証できない**（実測 2026-06-12, claude 2.1.175。対話起動すると通常のログイン onboarding に入る）。よって inference で足りるのは `skill`（headless `-p`）のみで、`guards`（対話 TTY）と `live`（remote-control＋アプリ）は full `claude auth login` を要する。
 2. **`CLAUDE_CODE_OAUTH_TOKEN` を systemd ユーザーマネージャ環境に残さない**こと。残すと `claude` がディスクの full login より env トークンを優先し、remote-control が拒否され続ける（`live` の前提では設定しない／必要なら `unset-environment`）。
 3. **ワークスペース信頼**: systemd 起動の remote-control は信頼ダイアログを出せないため、**新規インスタンス dir は事前に信頼**しておく必要がある（その dir で一度対話 `claude` を起動して承認）。これは実利用の**初回 `/rcd start <name>` にも当てはまる**（→ §8 で扱い）。
 4. **コンテナではプラグインを `--plugin-dir` でロード**（`~/.claude` へ install しない）。unit の ExecStart は `--plugin-dir` を渡さないため、**unit が起こす base/on-demand セッションには `/rcd` が無い**。帰結:

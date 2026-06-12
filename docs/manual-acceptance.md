@@ -31,13 +31,13 @@ Expected: `skill: N passed, 0 failed`.
 
 Verifies the destructive-verb protections that need a TTY: typed confirmations
 (`destroy` / `restart-all`) and SELF refusal. Uses stub-backed fixture units so
-SELF detection is reliable. A `setup-token` (inference) is enough — the
-interactive Claude authenticates via it; no remote-control / app / full login.
+SELF detection is reliable. Needs a full `claude auth login`: the interactive TUI
+cannot authenticate from a setup-token (only headless `-p` can), so it runs the
+normal login onboarding. No app / no remote-control is used here.
 
 ```sh
-claude setup-token                 # requires a Claude subscription
-export CLAUDE_CODE_OAUTH_TOKEN=<token>
-./test/acceptance/guards.sh        # opens an interactive Claude; follow the printed checklist
+./test/acceptance/guards.sh        # opens an interactive Claude; choose full `claude auth login`
+                                   # in onboarding, then follow the printed checklist
 ./test/acceptance/guards.sh --teardown
 ```
 

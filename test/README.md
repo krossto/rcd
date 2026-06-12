@@ -63,13 +63,13 @@ major / behaviour-affecting version.
 
 ## Manual — `guards`
 
-A `setup-token` (inference scope) is enough. The script opens an interactive
-Claude session; follow the printed checklist.
+Needs a **full `claude auth login`**: the interactive TUI cannot authenticate
+from a setup-token (only headless `-p` can), so it runs the normal login
+onboarding. The script opens an interactive Claude session; choose full login in
+onboarding, then follow the printed checklist.
 
 ```sh
-claude setup-token                 # requires a Claude subscription
-export CLAUDE_CODE_OAUTH_TOKEN=<token>
-./test/acceptance/guards.sh
+./test/acceptance/guards.sh        # choose full `claude auth login` in onboarding
 ./test/acceptance/guards.sh --teardown
 ```
 
