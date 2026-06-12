@@ -5,5 +5,8 @@
   "author": {
     "name": "krossto"
   },
+  "homepage": "https://github.com/krossto/rcd",
+  "repository": "https://github.com/krossto/rcd",
+  "license": "MIT",
   "keywords": ["remote-control", "systemd", "daemon", "claude-code"]
 }
