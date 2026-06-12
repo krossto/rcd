@@ -2,58 +2,47 @@
 
 *English | [日本語](README.ja.md)*
 
-Tests for the rcd plugin, organised by **how much they can be automated**, which
-in turn reflects **what each layer can verify**.
+Tests for the rcd plugin, grouped by how far each can be automated — which
+follows from what it can verify. The deterministic machinery (unit launch logic,
+skill/plugin definition, systemd wiring) is checked against a **stub `claude`**
+(`test/stub-claude`) with no auth or network, so it is fully automated. Checking
+that the **real Claude** follows `SKILL.md`, that the plugin loads, and that the
+live `claude remote-control` runtime works needs a real Claude, so it is run by
+hand.
 
-Two things are being checked, and they need different machinery:
-
-1. **Deterministic machinery** — the unit's launch logic, the skill/plugin
-   definition, the systemd wiring. This is verified against a **stub `claude`**
-   (`test/stub-claude`), so it needs no real Claude, no auth, and no network. It
-   is fully automatable.
-2. **Real-Claude behaviour** — whether the actual Claude, reading `SKILL.md`,
-   follows it; whether the plugin loads and `/rcd` resolves; and the live
-   `claude remote-control` runtime. This needs a real Claude (and, for the
-   deepest checks, a logged-in account and the app), so it cannot go in CI and is
-   run by hand.
-
-All real-Claude layers run inside an **ephemeral, privileged systemd Docker
-container** with its own `HOME`. The host's units, skills, and running instances
-are never touched.
+Every real-Claude layer runs in an **ephemeral, privileged systemd Docker
+container** with its own `HOME`; the host's units, skills, and instances are
+never touched.
 
 ## Overview
 
-| Layer | Automation | Verifies | Run it when |
-|---|---|---|---|
-| `lint` | **Full** (CI) | The skill/plugin **definition** is well-formed: frontmatter, `allowed-tools` covers the commands used, the unit's inline shell parses, `RCD_INSTANCE` is wired, bundled paths use the substitutable `${CLAUDE_PLUGIN_ROOT}` form. | Every change. |
-| `logic` | **Full** (CI) | The unit's **launch logic** in isolation: the worktree-vs-same-dir decision, the `--name` / session-name prefix, and the not-initialised / missing-claude guards. | Every change. |
-| `service` | **Full** (needs Docker) | The unit actually **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for both same-dir and worktree directories. | Every change, where Docker is available. |
-| `skill` | **Semi** | The real Claude **follows `SKILL.md`**: the plugin loads, `/rcd` resolves, `init` records config and installs the unit, `start` creates the instance dir and enables the unit, and invalid names are refused. | The skill prose, the plugin packaging, or the `claude` CLI changed (see below). |
-| `live` | **Manual** | The **live `claude remote-control` runtime** the stub cannot reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the claude.ai/code session-name format, and SELF-refusal / typed confirmations in a live session. | Establishing a baseline, or the unit's identity/naming wiring or the external `claude`/claude.ai behaviour changed (see below). |
+| Layer | Automation | Verifies |
+|---|---|---|
+| `lint` | Full (CI) | The skill/plugin **definition**: frontmatter, `allowed-tools` coverage, the unit's inline shell parses and wires `RCD_INSTANCE`, bundled paths use `${CLAUDE_PLUGIN_ROOT}`. |
+| `logic` | Full (CI) | The unit's **launch logic** in isolation: worktree-vs-same-dir, `--name` / session-name prefix, and the uninitialised / missing-claude guards. |
+| `service` | Full (Docker) | The unit **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for same-dir and worktree. |
+| `skill` | Semi | The real Claude **follows `SKILL.md`**: plugin loads, `/rcd` resolves, `init` records config + installs the unit, `start` creates the dir + enables the unit, invalid names refused. |
+| `live` | Manual | The **live `claude remote-control` runtime** a stub can't reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the session-name format, and live SELF-refusal / typed confirmations. |
 
 `skill` and `live` are the two modes of the acceptance harness
-(`test/acceptance/`): the same run drives the `skill` checks automatically and
-leaves the `live` checks for you to perform.
+(`test/acceptance/`): one run does the `skill` checks automatically and leaves
+the `live` checks for you.
 
-## Fully automatic — continuous tests
+## Fully automatic
 
-Hermetic (stub `claude`); these are your continuous safety net.
+Hermetic (stub `claude`); run on every change — the continuous safety net.
 
 ```sh
 ./test/run.sh        # lint + logic — no Docker, no network, CI-safe
-./test/service.sh    # service — builds a systemd Docker container, runs there
+./test/service.sh    # service — builds a systemd Docker container (needs Docker)
 ```
 
-`lint` optionally runs the external linters `skill-tools` and `claudelint` when
-installed (or with `RCD_LINT_EXTERNAL=1`); they fetch npm packages, so they are
-opt-in and off by default.
+`lint` also runs the external linters `skill-tools` and `claudelint` when present
+(or with `RCD_LINT_EXTERNAL=1`); they fetch npm packages, so they are opt-in.
 
 ## Semi-automatic — `skill`
 
-**Purpose:** confirm that the real Claude, reading `SKILL.md`, does the right
-thing — the part the deterministic layers cannot judge (they check structure,
-not whether Claude follows the prose). A `setup-token` (inference scope) is
-enough for this.
+A `setup-token` (inference scope) is enough.
 
 ```sh
 claude setup-token                 # requires a Claude subscription
@@ -61,49 +50,40 @@ export CLAUDE_CODE_OAUTH_TOKEN=<token>
 ./test/acceptance/run-acceptance.sh
 ```
 
-This leaves the container `rcd-acceptance-run` **running** so the `live` checks
-below can reuse it. Tear down only when you are finished with the whole
-acceptance session — **skip this if you will run `live` next**, since `live`
-reuses the same container and ends with the same teardown:
+The run leaves the container `rcd-acceptance-run` **running** so `live` can reuse
+it; tear down only when fully done — skip this if you'll run `live` next, which
+ends with the same teardown:
 
 ```sh
 ./test/acceptance/run-acceptance.sh --teardown
 ```
 
-Most checks are machine-graded; a few model-judgement items (e.g. how an invalid
-name is refused) are **printed for you to read** rather than auto-graded.
+A few model-judgement items (e.g. how an invalid name is refused) are printed for
+you to read rather than auto-graded.
 
-**Run it when:**
-
-- `SKILL.md` prose changes (verb procedures, the name rule, how bundled files are
-  referenced) — wording can change Claude's behaviour even when `lint` passes.
-- Plugin packaging changes (`plugin.json` / `marketplace.json`, directory layout,
-  skill name, where the unit lives) — this affects loading and `/rcd` resolution.
-- The `claude` CLI is upgraded across a major or behaviour-affecting version.
+**Run when:** `SKILL.md` prose changes (procedures, the name rule, bundled-file
+references); plugin packaging changes (`plugin.json` / `marketplace.json`,
+layout, skill name, unit location); or the `claude` CLI is upgraded across a
+major / behaviour-affecting version.
 
 ## Manual — `live`
 
-**Purpose:** verify the live `claude remote-control` behaviour that no stub can
-reproduce. It needs a **full `claude auth login`** (a `setup-token` is
-inference-only and cannot run `claude remote-control`) plus the claude.ai/code
-app, because it exercises the relay and the sessions it spawns.
+Needs a **full `claude auth login`** (a `setup-token` can't run
+`claude remote-control`) and the claude.ai/code app.
 
-**Procedure.** Run the `docker exec` lines below from your **host shell** — the
-same terminal you ran `./test/acceptance/run-acceptance.sh` in (that script
-leaves the container `rcd-acceptance-run` running). `docker exec` runs each
-command *inside* that container as the `rcd` user (uid 1000); you do not enter
-the container yourself. The rcd config recorded by the prior `skill` run is
-reused, so run a `skill` pass first and do **not** tear down before finishing
-here.
+Run the `docker exec` lines from your **host shell** — the same terminal as
+`run-acceptance.sh`, which left `rcd-acceptance-run` running; each runs inside
+that container as user `rcd` (uid 1000), so you don't enter it. Do a `skill` pass
+first and don't tear down before finishing.
 
-1. Log in with a full-scope token, following the printed URL / device prompts:
+1. Log in with a full-scope token (follow the printed URL / device prompts):
 
    ```sh
    docker exec -it -u rcd rcd-acceptance-run claude auth login
    ```
 
 2. Start an instance whose directory is a git top-level (so on-demand sessions
-   use a worktree) and confirm the base session actually came up:
+   use a worktree) and confirm the base session came up:
 
    ```sh
    docker exec -it -u rcd rcd-acceptance-run bash -lc '
@@ -113,48 +93,31 @@ here.
      sleep 3; systemctl --user is-active claude-remote-control@rcdtest-live.service'
    ```
 
-   Expect `active`. If it stays `activating` (auto-restart loop), the login did
-   not take — redo step 1.
+   Expect `active`; if it stays `activating` (restart loop), the login didn't
+   take — redo step 1.
 
-3. In claude.ai/code (web or app), find the base session
-   `rcdtest-host-rcdtest-live-base` and open a **new** session on that instance.
-   This is what spawns an on-demand (worktree) session.
+3. In claude.ai/code, open a **new** session on `rcdtest-host-rcdtest-live-base`
+   (this spawns an on-demand worktree session) and in it check:
 
-4. In that on-demand session, check the two things the stub cannot:
+   - `echo "$RCD_INSTANCE"` prints `rcdtest-live` — the env is inherited into
+     on-demand/worktree sessions (the basis for self-detection); empty = defect.
+   - the session name reads `rcdtest-host-rcdtest-live-<auto>` (`-` separated).
+   - `/rcd stop rcdtest-live` and `/rcd destroy rcdtest-live` both **refuse** (you
+     are SELF); `/rcd restart-all` defers SELF (a detached restart).
 
-   - `echo "$RCD_INSTANCE"` must print `rcdtest-live`. This confirms the env is
-     inherited into on-demand/worktree sessions — the basis for self-detection.
-     If it is empty, the env is **not** inherited → defect.
-   - The session's display name reads `rcdtest-host-rcdtest-live-<auto>`, with
-     `-` separators.
-
-5. Still in that on-demand session, exercise self-protection:
-
-   - `/rcd stop rcdtest-live` and `/rcd destroy rcdtest-live` must both **refuse**
-     (you are inside SELF).
-   - `/rcd restart-all` restarts the others but defers SELF (a detached restart).
-
-6. Tear down and remove the disposable sessions:
+4. Tear down, then delete the leftover `rcdtest-host-*` sessions in claude.ai/code:
 
    ```sh
    ./test/acceptance/run-acceptance.sh --teardown
    ```
 
-   then delete the leftover `rcdtest-host-*` sessions in claude.ai/code.
-
-**Run it when:**
-
-- Establishing a baseline before relying on these behaviours.
-- The unit's identity/naming/spawn wiring changes (`RCD_INSTANCE`, `--name`,
-  the session-name prefix, `--spawn`).
-- You suspect the `claude` CLI or claude.ai changed remote-control env
-  inheritance or session-name rendering, or the self-detection / naming contract
-  changed.
+**Run when:** establishing a baseline; the unit's identity/naming/spawn wiring
+changes (`RCD_INSTANCE`, `--name`, session-name prefix, `--spawn`); or you suspect
+`claude` / claude.ai changed remote-control env inheritance or session-name
+rendering.
 
 ## Notes
 
-- **`skill` and `live` are manual by design** — never wire them into CI or run
-  them automatically. They need credentials and (for `live`) human judgement.
-- **Findings graduate.** A failure first caught by `skill` or `live` should,
-  where possible, become a `lint` / `logic` check, so the same class of bug is
-  caught automatically next time and the manual surface shrinks.
+- `skill` and `live` are manual by design — never wire them into CI.
+- Findings graduate: a failure first caught by `skill` / `live` should become a
+  `lint` / `logic` check where possible, shrinking the manual surface.
