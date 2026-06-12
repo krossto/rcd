@@ -36,6 +36,7 @@ Parse `$ARGUMENTS` as `<verb> [<name>]`.
 - No verb: print the verb table below and stop.
 - Unknown verb: print the table and note which one was unrecognized.
 - Verb requires `<name>` but none given: ask the user. Do not guess.
+- **The name is a single token.** Treat the whole argument after the verb as one `<name>`. If more than one whitespace-separated token follows the verb (e.g. `start a b`), the intended name contains whitespace and is therefore invalid — refuse and show the rule. Never split it into several instances, and never silently use only the first token.
 - **Validate `<name>` before any `systemctl`/`mkdir`:** it must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$` and not be `.` / `..` / end in `.service`. The name becomes a directory, a systemd instance, and a session-name prefix, so reject `/`, whitespace, `@`, `%`, and leading-dot names. On a non-matching name, refuse and show the rule. Do not escape or "fix" it.
 
 **Confirmation for destructive verbs (`destroy`, `restart-all`) is an in-skill typed confirmation, not a permission prompt.** The workspace allow-list grants `Bash(systemctl --user *)`, and the session may run in `auto` mode, so a permission prompt will likely **not** appear — especially over remote/mobile. Do not rely on it. Require the user to type the exact confirmation string defined per-verb below before executing. No typed match → abort. Do not work around the typed confirmation.
@@ -126,4 +127,5 @@ Use after `claude` CLI auto-updates — running instances hold stale install pat
 - About to run `systemctl --user restart 'claude-remote-control@*'` from inside an instance → the glob includes SELF. Use the SELF-excluding `restart-all` procedure instead.
 - About to `disable`/`stop` a unit whose name == SELF → refuse; tell the user to run it from another instance.
 - About to `start` while `~/.config/rcd/root` is missing → tell the user to run `/rcd init` first.
+- About to create or act on more than one instance from a single `/rcd <verb>` because multiple tokens followed the verb (e.g. `start a b`) → refuse; a name is one token, and `a b` contains whitespace so it is invalid.
 - Skipping the typed confirmation because "no prompt appeared / auto mode / the user already said yes" → the typed confirmation IS the confirmation. Require it.
