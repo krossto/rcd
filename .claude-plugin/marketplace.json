@@ -1,0 +1,18 @@
+{
+  "name": "rcd-marketplace",
+  "description": "Marketplace for the rcd plugin",
+  "owner": {
+    "name": "krossto"
+  },
+  "plugins": [
+    {
+      "name": "rcd",
+      "description": "Lifecycle management for per-project Claude Code remote-control systemd instances",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "krossto"
+      }
+    }
+  ]
+}

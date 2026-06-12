@@ -1,0 +1,7 @@
+# Local Claude Code settings and run artifacts (not for publication)
+.claude/settings.local.json
+.claude/.codex-design-review.lock
+.claude/tmp-cdr/
+
+# Local-only research note (not for publication)
+docs/research-plugin-acceptance-automation.md

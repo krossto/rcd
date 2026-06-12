@@ -1,0 +1,12 @@
+{
+  "name": "rcd",
+  "version": "0.1.0",
+  "description": "Lifecycle management for per-project Claude Code remote-control systemd instances",
+  "author": {
+    "name": "krossto"
+  },
+  "homepage": "https://github.com/krossto/rcd",
+  "repository": "https://github.com/krossto/rcd",
+  "license": "MIT",
+  "keywords": ["remote-control", "systemd", "daemon", "claude-code"]
+}
