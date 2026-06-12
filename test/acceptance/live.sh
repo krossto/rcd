@@ -39,11 +39,18 @@ docker exec -u rcd "$C" bash -lc '
   command -v claude > ~/.config/rcd/claude-bin
   cp /mnt/rcd/units/claude-remote-control@.service ~/.config/systemd/user/
   systemctl --user daemon-reload
-  # One-time: accept the remote-control consent. `claude remote-control` asks
-  # "Enable Remote Control? (y/n)" on first run; the systemd unit has no TTY and
-  # cannot answer it (it would exit and hit the restart limit). Pre-accept here —
-  # this writes ~/.claude.json "remoteDialogSeen": true (machine-global, once).
-  ( cd ~/rcdtest-root/rcdtest-live && printf "y\n" | timeout 8 claude remote-control --name rcd-consent >/dev/null 2>&1 ) || true
+  # One-time: accept the remote-control consent WITHOUT connecting to the relay.
+  # `claude remote-control` asks "Enable Remote Control? (y/n)" on first run; the
+  # systemd unit has no TTY and cannot answer it (it would exit and hit the restart
+  # limit). A *connecting* probe also registers a relay environment in the instance
+  # dir, which the base session then joins and shows under the probe name in the
+  # app instead of its own --name. So set the consent flag directly in the config
+  # (machine-global, once); the base session is then the sole/first connection.
+  if [ -f ~/.claude.json ]; then
+    t="$(mktemp)" && jq ".remoteDialogSeen = true" ~/.claude.json > "$t" && mv "$t" ~/.claude.json
+  else
+    printf "%s\n" "{\"remoteDialogSeen\": true}" > ~/.claude.json
+  fi
   systemctl --user reset-failed claude-remote-control@rcdtest-live.service 2>/dev/null || true
   systemctl --user enable --now claude-remote-control@rcdtest-live.service
   sleep 4
@@ -66,6 +73,5 @@ the relay), and in THAT session confirm:
   session display name    -> rcdtest-host-rcdtest-live-<auto>  ('-' separated)
 
 When done:  $0 --teardown
-and delete the leftover 'rcdtest-host-*' sessions in claude.ai/code (including the
-short-lived 'rcd-consent' probe session).
+and delete the leftover 'rcdtest-host-*' sessions in claude.ai/code.
 EOF
