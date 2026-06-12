@@ -86,15 +86,16 @@ fi
 3. **`live.sh` の冪等性**: 既に `remoteDialogSeen:true` の場合も jq 直書きは安全（上書き）。`~/.claude.json` が step1 ログイン後に必ず存在する前提だが、不在時の分岐も用意済み。
 4. **検証可能性**: 本修正の効果（base が固有名で出る）は、claude.ai/code 表示というアプリ側挙動に依存し、自動テストでは確認できない。クリーン再実行＋人手確認が必要。
 
-## 9. 検証状況（本ドキュメントの中心的検証・未完了）
+## 9. 検証状況（本ドキュメントの中心的検証）
 
-**status: 未検証（blocking）。** 本修正の効果（base が固有名でアプリに出る）は claude.ai/code の表示に依存し自動テストでは確認できない。下記クリーン再実行を実施し、本節を**完了記録**（実施日 / `claude` CLI 版 / 各項目の pass・fail / base ジャーナル抜粋）に更新するまで、`live` 単位は合格としない。
+**status: 検証済み（2026-06-12, WSL2 Ubuntu 24.04, `claude` 2.1.175）。** 修正版（consent フラグ直書き `ac94390`）でクリーン再実行し、claude.ai/code（Web）で人手確認:
 
-クリーン再実行チェックリスト（`./test/acceptance/live.sh --teardown` → `git pull`（`ac94390` 取得）→ 再 login＋trust → step2 フラグ承諾 → step3 アプリ確認）:
+- [x] base がアプリ一覧に **`rcdtest-host-rcdtest-live-base`** で表示（`rcd-consent` は出ない）。base ジャーナルは `✔︎ Connected · rcdtest-live`、プローブ由来の共有 environment 無し。
+- [x] base から開いた on-demand セッションで `echo "$RCD_INSTANCE"` → **`rcdtest-live`**（self-detection の基盤＝インスタンス名継承を確認）。
+- [x] on-demand はローカル git worktree で動作（branch `worktree-bridge-cse_*`、`64aa9f5 fixture` 由来、host `rcdtest-host`）＝クラウドではなくコンテナ内 spawn。
 
-- [ ] claude.ai/code 一覧に **`rcdtest-host-rcdtest-live-base`** が出る（`rcd-consent` は出ない）
-- [ ] base ジャーナルに `rcd-consent` / 共有 environment が無い（`✔︎ Connected · rcdtest-live` のみ）
-- [ ] base から開いた on-demand セッションで `echo "$RCD_INSTANCE"` → `rcdtest-live`
-- [ ] 表示名が `rcdtest-host-rcdtest-live-<auto>` 形式（`-` 区切り）
+検証中に判明した運用上の注意（手順として記録）:
+- on-demand セッションは **「New session → リモートコントロール環境 `rcdtest-host / rcdtest-live` を選択」** で開く。既に固着した旧セッションの再オープンでは回復しない（→ `live.sh` step3 文言をこの趣旨に修正済み）。
+- 初回 on-demand spawn は worktree 経路のため **instance dir に HEAD コミットが必要**だった。`live.sh` は step1 で初期コミットを seed（`1fa00ec`）。製品 unit 側も空リポ→same-dir フォールバックを別途実装（spec `2026-06-12-rcd-worktree-empty-repo-fallback.md`, `e29aa19`）。
 
-完了したらこのチェックを記録に置換し、status を「検証済み」に更新する。
+`./test/acceptance/live.sh --teardown` 実施。残った `rcdtest-host-*` / `rcd-consent` 環境は claude.ai 側に削除手段が無く残置（`docs/manual-acceptance.md` の live 注記参照）。
