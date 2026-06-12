@@ -22,11 +22,13 @@ never touched.
 | `logic` | Full (CI) | The unit's **launch logic** in isolation: worktree-vs-same-dir, `--name` / session-name prefix, and the uninitialised / missing-claude guards. |
 | `service` | Full (Docker) | The unit **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for same-dir and worktree. |
 | `skill` | Semi | The real Claude **follows `SKILL.md`**: plugin loads, `/rcd` resolves, `init` records config + installs the unit, `start` creates the dir + enables the unit, invalid names refused. |
-| `live` | Manual | The **live `claude remote-control` runtime** a stub can't reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the session-name format, and live SELF-refusal / typed confirmations. |
+| `guards` | Manual | **Destructive-verb protections** that need a TTY: typed confirmations (`destroy` / `restart-all`) and SELF refusal, against stub-backed fixture units. |
+| `live` | Manual | The **live `claude remote-control` runtime** a stub can't reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions (G4), and the session-name format (G5). |
 
-`skill` and `live` are the two modes of the acceptance harness
-(`test/acceptance/`): one run does the `skill` checks automatically and leaves
-the `live` checks for you.
+The three acceptance units (`skill` / `guards` / `live`) are each run via their
+own script in `test/acceptance/`. Each unit builds the image, boots its own
+container, and tears it down — they are fully independent with no shared state
+or ordering. See `docs/manual-acceptance.md` for the full procedure.
 
 ## Fully automatic
 
@@ -47,69 +49,44 @@ A `setup-token` (inference scope) is enough.
 ```sh
 claude setup-token                 # requires a Claude subscription
 export CLAUDE_CODE_OAUTH_TOKEN=<token>
-./test/acceptance/run-acceptance.sh
+./test/acceptance/skill.sh
+./test/acceptance/skill.sh --teardown
 ```
 
-The run leaves the container `rcd-acceptance-run` **running** so `live` can reuse
-it; tear down only when fully done — skip this if you'll run `live` next, which
-ends with the same teardown:
-
-```sh
-./test/acceptance/run-acceptance.sh --teardown
-```
-
-A few model-judgement items (e.g. how an invalid name is refused) are printed for
-you to read rather than auto-graded.
+Expected: `skill: N passed, 0 failed`. A few model-judgement items (e.g. how an
+invalid name is refused) are printed for you to read rather than auto-graded.
 
 **Run when:** `SKILL.md` prose changes (procedures, the name rule, bundled-file
 references); plugin packaging changes (`plugin.json` / `marketplace.json`,
 layout, skill name, unit location); or the `claude` CLI is upgraded across a
 major / behaviour-affecting version.
 
+## Manual — `guards`
+
+A `setup-token` (inference scope) is enough. The script opens an interactive
+Claude session; follow the printed checklist.
+
+```sh
+claude setup-token                 # requires a Claude subscription
+export CLAUDE_CODE_OAUTH_TOKEN=<token>
+./test/acceptance/guards.sh
+./test/acceptance/guards.sh --teardown
+```
+
+**Run when:** the `SKILL.md` confirmation / SELF-detection / self-protection
+logic changed.
+
 ## Manual — `live`
 
 Needs a **full `claude auth login`** (a `setup-token` can't run
-`claude remote-control`) and the claude.ai/code app.
+`claude remote-control`) and the claude.ai/code app. The script guides you
+through login, starting the instance, and the app checks. See
+`docs/manual-acceptance.md` for the full step-by-step procedure.
 
-Run the `docker exec` lines from your **host shell** — the same terminal as
-`run-acceptance.sh`, which left `rcd-acceptance-run` running; each runs inside
-that container as user `rcd` (uid 1000), so you don't enter it. Do a `skill` pass
-first and don't tear down before finishing.
-
-1. Log in with a full-scope token (follow the printed URL / device prompts):
-
-   ```sh
-   docker exec -it -u rcd rcd-acceptance-run claude auth login
-   ```
-
-2. Start an instance whose directory is a git top-level (so on-demand sessions
-   use a worktree) and confirm the base session came up:
-
-   ```sh
-   docker exec -it -u rcd rcd-acceptance-run bash -lc '
-     export XDG_RUNTIME_DIR=/run/user/1000
-     mkdir -p ~/rcdtest-root/rcdtest-live && git -C ~/rcdtest-root/rcdtest-live init -q
-     systemctl --user enable --now claude-remote-control@rcdtest-live.service
-     sleep 3; systemctl --user is-active claude-remote-control@rcdtest-live.service'
-   ```
-
-   Expect `active`; if it stays `activating` (restart loop), the login didn't
-   take — redo step 1.
-
-3. In claude.ai/code, open a **new** session on `rcdtest-host-rcdtest-live-base`
-   (this spawns an on-demand worktree session) and in it check:
-
-   - `echo "$RCD_INSTANCE"` prints `rcdtest-live` — the env is inherited into
-     on-demand/worktree sessions (the basis for self-detection); empty = defect.
-   - the session name reads `rcdtest-host-rcdtest-live-<auto>` (`-` separated).
-   - `/rcd stop rcdtest-live` and `/rcd destroy rcdtest-live` both **refuse** (you
-     are SELF); `/rcd restart-all` defers SELF (a detached restart).
-
-4. Tear down, then delete the leftover `rcdtest-host-*` sessions in claude.ai/code:
-
-   ```sh
-   ./test/acceptance/run-acceptance.sh --teardown
-   ```
+```sh
+./test/acceptance/live.sh
+./test/acceptance/live.sh --teardown
+```
 
 **Run when:** establishing a baseline; the unit's identity/naming/spawn wiring
 changes (`RCD_INSTANCE`, `--name`, session-name prefix, `--spawn`); or you suspect
@@ -118,6 +95,6 @@ rendering.
 
 ## Notes
 
-- `skill` and `live` are manual by design — never wire them into CI.
-- Findings graduate: a failure first caught by `skill` / `live` should become a
+- `skill`, `guards`, and `live` are manual by design — never wire them into CI.
+- Findings graduate: a failure first caught by an acceptance unit should become a
   `lint` / `logic` check where possible, shrinking the manual surface.
