@@ -1,5 +1,7 @@
 # Tests
 
+*English | [日本語](README.ja.md)*
+
 Tests for the rcd plugin, organised by **how much they can be automated**, which
 in turn reflects **what each layer can verify**.
 
@@ -26,8 +28,12 @@ are never touched.
 | `lint` | **Full** (CI) | The skill/plugin **definition** is well-formed: frontmatter, `allowed-tools` covers the commands used, the unit's inline shell parses, `RCD_INSTANCE` is wired, bundled paths use the substitutable `${CLAUDE_PLUGIN_ROOT}` form. | Every change. |
 | `logic` | **Full** (CI) | The unit's **launch logic** in isolation: the worktree-vs-same-dir decision, the `--name` / session-name prefix, and the not-initialised / missing-claude guards. | Every change. |
 | `service` | **Full** (needs Docker) | The unit actually **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for both same-dir and worktree directories. | Every change, where Docker is available. |
-| `acceptance` (Tier A) | **Semi** (author runs) | The real Claude **follows `SKILL.md`**: the plugin loads, `/rcd` resolves, `init` records config and installs the unit, `start` creates the instance dir and enables the unit, and invalid names are refused. | The skill prose, the plugin packaging, or the `claude` CLI changed (see below). |
-| `acceptance` (Tier B) | **Manual** (author runs) | The **live `claude remote-control` runtime** the stub cannot reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the claude.ai/code session-name format, and SELF-refusal / typed confirmations in a live session. | Establishing a baseline, or the unit's identity/naming wiring or the external `claude`/claude.ai behaviour changed (see below). |
+| `skill` | **Semi** (author runs) | The real Claude **follows `SKILL.md`**: the plugin loads, `/rcd` resolves, `init` records config and installs the unit, `start` creates the instance dir and enables the unit, and invalid names are refused. | The skill prose, the plugin packaging, or the `claude` CLI changed (see below). |
+| `live` | **Manual** (author runs) | The **live `claude remote-control` runtime** the stub cannot reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, the claude.ai/code session-name format, and SELF-refusal / typed confirmations in a live session. | Establishing a baseline, or the unit's identity/naming wiring or the external `claude`/claude.ai behaviour changed (see below). |
+
+`skill` and `live` are the two modes of the acceptance harness
+(`test/acceptance/`): the same run drives the `skill` checks automatically and
+leaves the `live` checks for you to perform.
 
 ## Fully automatic — continuous tests
 
@@ -42,12 +48,12 @@ Hermetic (stub `claude`); these are your continuous safety net.
 installed (or with `RCD_LINT_EXTERNAL=1`); they fetch npm packages, so they are
 opt-in and off by default.
 
-## Semi-automatic — acceptance Tier A
+## Semi-automatic — `skill`
 
 **Purpose:** confirm that the real Claude, reading `SKILL.md`, does the right
 thing — the part the deterministic layers cannot judge (they check structure,
 not whether Claude follows the prose). A `setup-token` (inference scope) is
-enough for this tier.
+enough for this.
 
 ```sh
 claude setup-token                 # requires a Claude subscription
@@ -67,13 +73,13 @@ name is refused) are **printed for you to read** rather than auto-graded.
   skill name, where the unit lives) — this affects loading and `/rcd` resolution.
 - The `claude` CLI is upgraded across a major or behaviour-affecting version.
 
-## Manual — acceptance Tier B
+## Manual — `live`
 
 **Purpose:** verify the live `claude remote-control` behaviour that no stub can
 reproduce. This needs a **full `claude auth login`** (not a `setup-token`) and
 the claude.ai/code app, because it exercises the relay and spawned sessions.
 
-Run the standard Tier A flow first, then, in the container:
+Run the standard `skill` flow first, then, in the container:
 
 ```sh
 docker exec -it -u rcd rcd-acceptance-run bash -lc 'claude auth login'
@@ -97,8 +103,8 @@ the session name has the expected `-`-separated format, and SELF `stop`/`destroy
 
 ## Notes
 
-- **Acceptance is manual by design** — never wire it into CI or run it
-  automatically. It needs credentials and (for Tier B) human judgement.
-- **Findings graduate.** A failure first caught by acceptance should, where
-  possible, become a `lint`/`logic` check, so the same class of bug is caught
-  automatically next time and the manual surface shrinks.
+- **`skill` and `live` are manual by design** — never wire them into CI or run
+  them automatically. They need credentials and (for `live`) human judgement.
+- **Findings graduate.** A failure first caught by `skill` or `live` should,
+  where possible, become a `lint` / `logic` check, so the same class of bug is
+  caught automatically next time and the manual surface shrinks.
