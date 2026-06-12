@@ -80,8 +80,12 @@ reproduce. It needs a **full `claude auth login`** (a `setup-token` is
 inference-only and cannot run `claude remote-control`) plus the claude.ai/code
 app, because it exercises the relay and the sessions it spawns.
 
-**Procedure.** Reuses the running container `rcd-acceptance-run` and the rcd
-config recorded by a prior `skill` run; `rcd` is the in-container user (uid 1000).
+**Procedure.** Run the `docker exec` lines below from your **host shell** — the
+same terminal you ran `./test/acceptance/run-acceptance.sh` in (that script
+leaves the container `rcd-acceptance-run` running). `docker exec` runs each
+command *inside* that container as the `rcd` user (uid 1000); you do not enter
+the container yourself. The rcd config recorded by the prior `skill` run is
+reused.
 
 1. Log in with a full-scope token, following the printed URL / device prompts:
 

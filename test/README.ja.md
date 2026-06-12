@@ -76,8 +76,11 @@ export CLAUDE_CODE_OAUTH_TOKEN=<token>
 は inference 専用で `claude remote-control` を起動できない）と claude.ai/code アプリ
 が必要。
 
-**手順。** 起動中のコンテナ `rcd-acceptance-run` と、直前の `skill` 実行で記録済みの
-rcd 設定を再利用する。`rcd` はコンテナ内ユーザ（uid 1000）。
+**手順。** 以下の `docker exec` は**ホスト側のシェル**、つまり
+`./test/acceptance/run-acceptance.sh` を実行したのと同じターミナルで実行する（同
+スクリプトはコンテナ `rcd-acceptance-run` を起動したまま残す）。`docker exec` が各
+コマンドをそのコンテナ*内*でユーザ `rcd`（uid 1000）として実行するので、自分で
+コンテナに入る必要はない。直前の `skill` 実行で記録済みの rcd 設定を再利用する。
 
 1. full スコープのトークンでログインする（表示される URL / デバイスコードの指示に従う）:
 
