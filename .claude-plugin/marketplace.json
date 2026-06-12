@@ -1,6 +1,6 @@
 {
   "name": "rcd-marketplace",
-  "description": "Local marketplace for rcd plugin",
+  "description": "Marketplace for the rcd plugin",
   "owner": {
     "name": "krossto"
   },

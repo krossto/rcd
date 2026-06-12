@@ -15,7 +15,7 @@ fail=0
 # Commands the skill is expected to run. If the body uses one, allowed-tools
 # must grant it (matched by the command's leading binary token).
 for cmd in 'systemctl --user' 'systemd-run --user' 'journalctl --user' \
-           'loginctl' 'mkdir -p' 'cp ' 'printf ' 'cat ' 'command -v' 'pwd' 'test '; do
+           'loginctl' 'mkdir -p' 'cp ' 'printf ' 'cat ' 'command -v' 'pwd' 'test ' 'basename '; do
   printf '%s' "$body" | grep -qF "$cmd" || continue          # not used → skip
   bin="${cmd%% *}"
   if ! printf '%s' "$allowed" | grep -qE "Bash\(${bin}( |\))"; then

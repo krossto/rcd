@@ -2,3 +2,6 @@
 .claude/settings.local.json
 .claude/.codex-design-review.lock
 .claude/tmp-cdr/
+
+# Local-only research note (not for publication)
+docs/research-plugin-acceptance-automation.md

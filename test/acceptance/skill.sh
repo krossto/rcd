@@ -69,12 +69,12 @@ assert_start(){ # $1=name $2=setup-cmd(creates dir condition)
 assert_start rcdtest-plain ':'
 assert_start rcdtest-child 'git -C ~/rcdtest-root init -q; mkdir -p ~/rcdtest-root/rcdtest-child'
 ex bash -lc 'rm -rf ~/rcdtest-root/.git' >/dev/null 2>&1 || true
-assert_start rcdtest-repo 'mkdir -p ~/rcdtest-root/rcdtest-repo; git -C ~/rcdtest-root/rcdtest-repo init -q'
+assert_start rcdtest-repo 'mkdir -p ~/rcdtest-root/rcdtest-repo; git -C ~/rcdtest-root/rcdtest-repo init -q; git -C ~/rcdtest-root/rcdtest-repo -c user.email=t@t -c user.name=t commit --allow-empty -q -m init'
 
 # #4 invalid name: NO side-effect, including path traversal outside root (spec §4 #4, F1/F6)
 snap(){ ex bash -lc 'export XDG_RUNTIME_DIR=/run/user/1000; systemctl --user list-unit-files "claude-remote-control@*" --no-legend 2>/dev/null | sort; echo --root--; find ~/rcdtest-root -mindepth 1 -maxdepth 1 -printf "%f\n" 2>/dev/null | sort; echo --home--; ls -1a ~ 2>/dev/null | sort'; }
 before="$(snap)"
-for bad in '../evil' 'a b' 'foo@bar'; do rcd '/home/rcd/rcdtest-root' start "$bad" >/tmp/skill-bad.log 2>&1 || true; done
+for bad in '../evil' 'a b' 'foo@bar' '.hidden' 'a%b' 'x.service'; do rcd '/home/rcd/rcdtest-root' start "$bad" >/tmp/skill-bad.log 2>&1 || true; done
 after="$(snap)"
 { [ "$before" = "$after" ] && ! ex bash -lc 'test -e ~/evil'; } \
   && ok "invalid names: no new unit/dir, no traversal (~/evil absent, side-effects unchanged)" \
