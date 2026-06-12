@@ -15,11 +15,11 @@ ok(){   pass=$((pass+1)); printf '  PASS %s\n' "$1"; }
 ng(){   fail=$((fail+1)); printf '  FAIL %s\n' "$1"; }
 note(){ printf '  -- %s\n' "$1"; }
 
-# Propagate the auth token to services started by the user manager, so the real
-# `claude remote-control` base sessions can authenticate (the unit itself does
-# not carry the token).
-[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && \
-  systemctl --user import-environment CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
+# Deliberately do NOT import CLAUDE_CODE_OAUTH_TOKEN into the user manager: a
+# setup-token is inference-only and cannot run `claude remote-control` anyway (so
+# the base session is soft-noted below), and leaving it in the manager's
+# environment would shadow a later full `claude auth login` during the `live`
+# checks — `claude` prefers the env token and would keep refusing Remote Control.
 
 # Permissions mirror what a consenting user grants — NO --dangerously-skip-permissions:
 #   --permission-mode acceptEdits : auto-approve file writes + mkdir/touch/mv/cp
