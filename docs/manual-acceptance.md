@@ -60,6 +60,15 @@ Control?" consent in step 2 (the systemd unit has no TTY to answer it). In real
 use the same applies: the first `/rcd start` on a machine needs that consent
 accepted once — see the first-run note in `skills/rcd/SKILL.md` (`start`).
 
+> **Leaves an un-removable claude.ai environment (platform limitation).** Each
+> `live` run registers a Remote Control environment (`rcdtest-host-rcdtest-live`)
+> with the claude.ai relay. `--teardown` removes the local container but **cannot**
+> deregister that environment — claude.ai currently has **no way to delete stale
+> Remote Control environments** (no web/app button, no CLI, no documented
+> auto-expiry; tracked in claude-code issue #50884). So every `live` run leaves one
+> dead `rcdtest-host-*` entry in your environment list that you cannot remove. Run
+> `live` sparingly (see **Run when** below), not in a loop.
+
 **Run when:** establishing a baseline; the unit's identity/naming/spawn wiring
 changed; or you suspect `claude`/claude.ai changed remote-control env inheritance
 or the session-name format.
