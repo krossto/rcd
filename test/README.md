@@ -59,7 +59,15 @@ enough for this.
 claude setup-token                 # requires a Claude subscription
 export CLAUDE_CODE_OAUTH_TOKEN=<token>
 ./test/acceptance/run-acceptance.sh
-./test/acceptance/run-acceptance.sh --teardown   # when done
+```
+
+This leaves the container `rcd-acceptance-run` **running** so the `live` checks
+below can reuse it. Tear down only when you are finished with the whole
+acceptance session — **skip this if you will run `live` next**, since `live`
+reuses the same container and ends with the same teardown:
+
+```sh
+./test/acceptance/run-acceptance.sh --teardown
 ```
 
 Most checks are machine-graded; a few model-judgement items (e.g. how an invalid
@@ -85,7 +93,8 @@ same terminal you ran `./test/acceptance/run-acceptance.sh` in (that script
 leaves the container `rcd-acceptance-run` running). `docker exec` runs each
 command *inside* that container as the `rcd` user (uid 1000); you do not enter
 the container yourself. The rcd config recorded by the prior `skill` run is
-reused.
+reused, so run a `skill` pass first and do **not** tear down before finishing
+here.
 
 1. Log in with a full-scope token, following the printed URL / device prompts:
 

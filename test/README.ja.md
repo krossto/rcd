@@ -55,7 +55,15 @@ hermetic（スタブ `claude`）。これが継続的な安全網。
 claude setup-token                 # Claude サブスクリプションが必要
 export CLAUDE_CODE_OAUTH_TOKEN=<token>
 ./test/acceptance/run-acceptance.sh
-./test/acceptance/run-acceptance.sh --teardown   # 終わったら
+```
+
+これはコンテナ `rcd-acceptance-run` を**起動したまま**残し、後述の `live` 検査が
+再利用できるようにする。teardown は受け入れセッション全体を終えるときだけ実行する
+— **続けて `live` を行うならスキップする**（`live` は同じコンテナを再利用し、最後に
+同じ teardown で締める）:
+
+```sh
+./test/acceptance/run-acceptance.sh --teardown
 ```
 
 大半は機械判定だが、一部のモデル判断項目（例: 不正名をどう拒否するか）は自動採点
@@ -80,7 +88,8 @@ export CLAUDE_CODE_OAUTH_TOKEN=<token>
 `./test/acceptance/run-acceptance.sh` を実行したのと同じターミナルで実行する（同
 スクリプトはコンテナ `rcd-acceptance-run` を起動したまま残す）。`docker exec` が各
 コマンドをそのコンテナ*内*でユーザ `rcd`（uid 1000）として実行するので、自分で
-コンテナに入る必要はない。直前の `skill` 実行で記録済みの rcd 設定を再利用する。
+コンテナに入る必要はない。直前の `skill` 実行で記録済みの rcd 設定を再利用するので、
+先に `skill` を実行し、ここを終えるまで teardown しないこと。
 
 1. full スコープのトークンでログインする（表示される URL / デバイスコードの指示に従う）:
 
