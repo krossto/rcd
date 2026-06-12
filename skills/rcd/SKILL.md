@@ -74,7 +74,11 @@ Sets up rcd. **Run from the directory you want as the instances directory** — 
 3. `systemctl --user enable --now claude-remote-control@<name>.service`.
 4. `systemctl --user status claude-remote-control@<name>.service --no-pager | head -15`.
 5. Report running/failed and the directory (`<root>/<name>`). Note whether it will use worktrees (the directory is a git repo top-level) or same-dir. If failed, suggest `/rcd logs <name>`.
-6. **First-run note (trust + remote-control consent):** The unit launches `claude remote-control` non-interactively (systemd, no TTY), so it cannot answer two first-run prompts and will fail to start until both are satisfied: (a) the **workspace-trust** dialog for a newly created instance directory (per directory), and (b) the one-time **"Enable Remote Control?"** consent (per machine). Tell the user, before the first `/rcd start <name>`: in `<root>/<name>`, run an interactive `claude` once and accept the folder-trust prompt; and run `claude remote-control` once, answer `y` to "Enable Remote Control?", then press Ctrl+C to stop it. After that, `/rcd start <name>` works — the consent is remembered machine-wide, so further new instances only need the per-directory trust step.
+6. **First-run note (trust + remote-control consent):** The unit launches `claude remote-control` non-interactively (systemd, no TTY), so it cannot answer two first-run prompts and will fail to start until both are satisfied: (a) the **workspace-trust** dialog for a newly created instance directory (per directory), and (b) the one-time **"Enable Remote Control?"** consent (per machine). Tell the user, before the first `/rcd start <name>`:
+   - **Trust (per directory):** in `<root>/<name>`, run an interactive `claude` once and accept the folder-trust prompt.
+   - **Consent (once per machine):** accept it from a **non-instance directory** — e.g. `cd ~ && claude remote-control`, answer `y` to "Enable Remote Control?", then press Ctrl+C. Do **not** run this consent step inside `<root>/<name>`: a remote-control session started there registers a relay environment for that directory, which the instance's base session then joins, so claude.ai/code would show the instance under the temporary consent name instead of `<hostname>-<name>-base`. The leftover one-off consent session can be deleted in claude.ai/code.
+
+   After that, `/rcd start <name>` works — the consent is remembered machine-wide, so further new instances only need their per-directory trust step.
 
 ### `stop <name>`
 
