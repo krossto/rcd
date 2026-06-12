@@ -74,7 +74,7 @@ Sets up rcd. **Run from the directory you want as the instances directory** — 
 3. `systemctl --user enable --now claude-remote-control@<name>.service`.
 4. `systemctl --user status claude-remote-control@<name>.service --no-pager | head -15`.
 5. Report running/failed and the directory (`<root>/<name>`). Note whether it will use worktrees (the directory is a git repo top-level) or same-dir. If failed, suggest `/rcd logs <name>`.
-6. **First-run note:** A newly created instance directory may be untrusted by Claude Code. Because the unit launches `claude remote-control` non-interactively (systemd), it cannot answer the workspace-trust dialog and will fail to start until the directory is trusted. Tell the user: the first time an instance is started, open that directory once with an interactive `claude` (in `<root>/<name>`) and accept the trust prompt, then `/rcd start <name>` again.
+6. **First-run note (trust + remote-control consent):** The unit launches `claude remote-control` non-interactively (systemd, no TTY), so it cannot answer two first-run prompts and will fail to start until both are satisfied: (a) the **workspace-trust** dialog for a newly created instance directory (per directory), and (b) the one-time **"Enable Remote Control?"** consent (per machine). Tell the user, before the first `/rcd start <name>`: in `<root>/<name>`, run an interactive `claude` once and accept the folder-trust prompt; and run `claude remote-control` once, answer `y` to "Enable Remote Control?", then press Ctrl+C to stop it. After that, `/rcd start <name>` works — the consent is remembered machine-wide, so further new instances only need the per-directory trust step.
 
 ### `stop <name>`
 

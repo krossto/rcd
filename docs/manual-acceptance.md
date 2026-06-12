@@ -45,15 +45,20 @@ normal login onboarding. No app / no remote-control is used here.
 
 ## `live` — app + full login, human-judged
 
-Verifies the live remote-control behaviour: `RCD_INSTANCE` inheritance into a
-relay-spawned on-demand/worktree session (G4) and the claude.ai/code session-name
-format (G5). Needs a full `claude auth login` (a setup-token cannot run
+Verifies the live remote-control behaviour: the instance name (`RCD_INSTANCE`) is
+inherited into a relay-spawned on-demand/worktree session, and the claude.ai/code
+session-name format. Needs a full `claude auth login` (a setup-token cannot run
 remote-control) and the app.
 
 ```sh
 ./test/acceptance/live.sh          # step 1 login+trust, step 2 start, step 3 app checks
 ./test/acceptance/live.sh --teardown
 ```
+
+The script pre-accepts the one-time `claude remote-control` "Enable Remote
+Control?" consent in step 2 (the systemd unit has no TTY to answer it). In real
+use the same applies: the first `/rcd start` on a machine needs that consent
+accepted once — see the first-run note in `skills/rcd/SKILL.md` (`start`).
 
 **Run when:** establishing a baseline; the unit's identity/naming/spawn wiring
 changed; or you suspect `claude`/claude.ai changed remote-control env inheritance

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Unit `live` — app + full login (spec §4 live). Brings up a live remote-control
-# base session, then guides the human through the app-only G4/G5 checks.
-# MANUAL acceptance only. Requires docker + a full `claude auth login` (a
-# setup-token cannot run remote-control).
+# base session, then guides the human through the app-only checks: the instance
+# name is inherited into the relay-spawned on-demand session, and the session
+# display-name format. MANUAL acceptance only. Requires docker + a full
+# `claude auth login` (a setup-token cannot run remote-control).
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 C=rcd-acc-live
@@ -38,23 +39,33 @@ docker exec -u rcd "$C" bash -lc '
   command -v claude > ~/.config/rcd/claude-bin
   cp /mnt/rcd/units/claude-remote-control@.service ~/.config/systemd/user/
   systemctl --user daemon-reload
+  # One-time: accept the remote-control consent. `claude remote-control` asks
+  # "Enable Remote Control? (y/n)" on first run; the systemd unit has no TTY and
+  # cannot answer it (it would exit and hit the restart limit). Pre-accept here —
+  # this writes ~/.claude.json "remoteDialogSeen": true (machine-global, once).
+  ( cd ~/rcdtest-root/rcdtest-live && printf "y\n" | timeout 8 claude remote-control --name rcd-consent >/dev/null 2>&1 ) || true
   systemctl --user reset-failed claude-remote-control@rcdtest-live.service 2>/dev/null || true
   systemctl --user enable --now claude-remote-control@rcdtest-live.service
   sleep 4
-  echo -n "base session is-active: "; systemctl --user is-active claude-remote-control@rcdtest-live.service'
+  act="$(systemctl --user is-active claude-remote-control@rcdtest-live.service || true)"
+  echo "base session is-active: $act"
+  [ "$act" = active ] || echo "  NOT active — see: journalctl --user -u claude-remote-control@rcdtest-live.service -n 30"'
 
 cat <<EOF
 
-== live step 3/3: app checks (G4 / G5) ==
-If is-active above is NOT 'active', the login/trust did not take — re-run step 1.
-Otherwise, in claude.ai/code (web or phone app), open a NEW session on the
-instance shown as 'rcdtest-host-rcdtest-live-base' (this spawns an on-demand
-worktree session via the relay), and in THAT session confirm:
+== live step 3/3: app checks ==
+If is-active above is NOT 'active', the base session did not start — see the
+journalctl hint printed above (login / trust / remote-control consent). Otherwise,
+in claude.ai/code (web or phone app), open a NEW session on the instance shown as
+'rcdtest-host-rcdtest-live-base' (this spawns an on-demand worktree session via
+the relay), and in THAT session confirm:
 
-  echo "\$RCD_INSTANCE"   -> prints rcdtest-live   (G4: inherited into on-demand;
-                            the basis for self-detection; empty = defect)
-  session display name    -> rcdtest-host-rcdtest-live-<auto>  ('-' separated) (G5)
+  echo "\$RCD_INSTANCE"   -> prints rcdtest-live
+       (the instance name is inherited into the on-demand session; empty = defect,
+        since self-detection relies on it)
+  session display name    -> rcdtest-host-rcdtest-live-<auto>  ('-' separated)
 
 When done:  $0 --teardown
-and delete the leftover 'rcdtest-host-*' sessions in claude.ai/code.
+and delete the leftover 'rcdtest-host-*' sessions in claude.ai/code (including the
+short-lived 'rcd-consent' probe session).
 EOF

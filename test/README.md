@@ -23,7 +23,7 @@ never touched.
 | `service` | Full (Docker) | The unit **runs as a `systemctl --user` service**: correct args and `RCD_INSTANCE` on the base process, for same-dir and worktree. |
 | `skill` | Manual (machine-judged) | The real Claude **follows `SKILL.md`**: plugin loads, `/rcd` resolves, `init` records config + installs the unit, `start` creates the dir + enables the unit, invalid names refused. |
 | `guards` | Manual | **Destructive-verb protections** that need a TTY: typed confirmations (`destroy` / `restart-all`) and SELF refusal, against stub-backed fixture units. |
-| `live` | Manual | The **live `claude remote-control` runtime** a stub can't reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions (G4), and the session-name format (G5). |
+| `live` | Manual | The **live `claude remote-control` runtime** a stub can't reach: `RCD_INSTANCE` inheritance into on-demand/worktree sessions, and the session-name format. |
 
 The three acceptance units (`skill` / `guards` / `live`) are each run via their
 own script in `test/acceptance/`. Each unit builds the image, boots its own
