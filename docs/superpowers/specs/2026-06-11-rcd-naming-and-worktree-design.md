@@ -54,7 +54,7 @@ unit の中核（`ExecStart`、抜粋）:
 
 ```sh
 root=$(cat "$HOME/.config/rcd/root"); [ -n "$root" ] || exit 1
-bin=$(cat "$HOME/.config/rcd/claude-bin"); [ -n "$bin" ] || bin=claude
+bin=$(cat "$HOME/.config/rcd/claude-bin"); [ -x "$bin" ] || { echo "rcd: claude path missing; run /rcd init" >&2; exit 1; }
 dir="$root/<name>"; mkdir -p "$dir"; cd "$dir" || exit 1
 if [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ] && git rev-parse --verify -q HEAD >/dev/null 2>&1; then spawn=worktree; else spawn=same-dir; fi
 exec "$bin" remote-control \
