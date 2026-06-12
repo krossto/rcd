@@ -66,11 +66,11 @@
 
 | # | 検証項目 | 経路 | 認証 | 判定 |
 |---|---|---|---|---|
-| 8 | G4: リレーが spawn する on-demand/worktree セッションへの `RCD_INSTANCE` 継承 | アプリ（リレー） | full | 人 |
-| 9 | G5: claude.ai/code のセッション表示名形式 `<host>-<name>-<auto>`（`-` 区切り） | アプリ＋UI | full | 人(UI) |
+| 8 | リレーが spawn する on-demand/worktree セッションへの `RCD_INSTANCE` 継承 | アプリ（リレー） | full | 人 |
+| 9 | claude.ai/code のセッション表示名形式 `<host>-<name>-<auto>`（`-` 区切り） | アプリ＋UI | full | 人(UI) |
 
 - 旧 #7「ライブ基底セッションが接続」は独立項目ではなく、本単位の**前提セットアップ**（full login → dir 信頼 → base 起動）として内包する。
-- G4/G5 の確認自体は **`/rcd` を使わない**（on-demand セッション内で `echo "$RCD_INSTANCE"` と表示名の目視）。
+- #8/#9 の確認自体は **`/rcd` を使わない**（on-demand セッション内で `echo "$RCD_INSTANCE"` と表示名の目視）。
 - **いつ**: ベースライン確立時／unit の識別・命名・spawn 配線（`RCD_INSTANCE`/`--name`/session-name-prefix/`--spawn`）変更時／`claude`・claude.ai が remote-control の env 継承やセッション名描画を変えた疑いのあるとき。
 
 ## 5. 独立性の原則（必須要件）
@@ -84,7 +84,7 @@
 3. **ワークスペース信頼**: systemd 起動の remote-control は信頼ダイアログを出せないため、**新規インスタンス dir は事前に信頼**しておく必要がある（その dir で一度対話 `claude` を起動して承認）。これは実利用の**初回 `/rcd start <name>` にも当てはまる**（→ §8 で扱い）。
 4. **コンテナではプラグインを `--plugin-dir` でロード**（`~/.claude` へ install しない）。unit の ExecStart は `--plugin-dir` を渡さないため、**unit が起こす base/on-demand セッションには `/rcd` が無い**。帰結:
    - `guards` の `/rcd` 駆動は **`docker exec` 対話＋`--plugin-dir`** で行う（アプリ接続の制御インスタンス経由は**コンテナでは不可**）。
-   - `live` の G4/G5 は `/rcd` 非依存なので、プラグイン不在の on-demand セッションでも成立する。
+   - `live` のアプリ確認（#8/#9）は `/rcd` 非依存なので、プラグイン不在の on-demand セッションでも成立する。
 5. **`skill` の headless 権限構成**（実証済み）: `--permission-mode acceptEdits` ＋ `--add-dir "$HOME"`（`~/.config` 書込）＋ `--add-dir "<plugin>"`（同梱 unit 読取）＋ カンマ区切り単一 `--allowedTools`、インスタンス root を `$HOME` 配下、プロンプトを先頭に置く。`--dangerously-skip-permissions` は不使用。
 6. 同梱パスは `${CLAUDE_PLUGIN_ROOT}`（波括弧）必須。波括弧なしは置換されない（既に修正済み・`lint` が回帰ガード）。
 7. **SELF 検出は `systemctl --user list-units`（`--all` 無し）で候補 unit を確認**するため、検証では対象 unit が active・listed であることが要件（→ §4 `guards` のスタブフィクスチャ）。enable のみ（inactive）や flap/failed では確実な根拠にならない。
@@ -92,7 +92,7 @@
 ## 7. 非目標
 
 - 公開（remote/PR）。
-- `live`（G4/G5）の自動化 — リレー＋アプリ＋人の目視が本質的に必要。
+- `live`（アプリ確認 #8/#9）の自動化 — リレー＋アプリ＋人の目視が本質的に必要。
 - コンテナへのプラグインのグローバル install（`--plugin-dir` を用いる）。
 - プラグイン実行時設計の変更（§8 の信頼注記を除く）。
 - `skill` を CI に載せる配線（自動層は lint/logic で担保。`skill` は認証を要する半自動）。
@@ -115,4 +115,4 @@
 - 「環境一様・経路＋認証で分割」（§3）→ 単位は経路（headless/対話/アプリ）と認証（inference/full）で一意に割り付く（§4）。
 - 独立性（§5）→ 旧構成の単位間依存・teardown 順序の混乱を解消。
 - 確定事実（§6）→ 各単位の前提・制約として反映済み（特に 1/2/3/4 が `guards`/`live` の経路と認証を決定）。
-- `service` との重複回避（§2）→ 実行時 argv は再検証せず、`live` は app 固有の G4/G5 に限定。
+- `service` との重複回避（§2）→ 実行時 argv は再検証せず、`live` は app 固有の確認（#8/#9）に限定。
