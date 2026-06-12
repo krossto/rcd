@@ -22,10 +22,10 @@ An interactive Claude opens in ~/rcdtest-root/rcdtest-live. Complete onboarding:
 choose 'claude auth login' (full scope, NOT a setup-token), and accept the
 folder-trust prompt. Then type /exit.
 EOF
-docker exec -it -u rcd "$C" bash -lc '
+docker exec -it -u rcd -e RCD_ACCEPTANCE_MODEL "$C" bash -lc '
   export XDG_RUNTIME_DIR=/run/user/1000
   mkdir -p ~/rcdtest-root/rcdtest-live && git -C ~/rcdtest-root/rcdtest-live init -q
-  cd ~/rcdtest-root/rcdtest-live && claude --plugin-dir /mnt/rcd'
+  cd ~/rcdtest-root/rcdtest-live && claude --plugin-dir /mnt/rcd ${RCD_ACCEPTANCE_MODEL:+--model "$RCD_ACCEPTANCE_MODEL"}'
 
 # Step 2: init (records real claude-bin) + start the live base session.
 echo "== live step 2/3: start the base session =="

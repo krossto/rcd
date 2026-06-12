@@ -15,3 +15,9 @@ with its own `HOME`; the host is never touched.
 | `live` | `./test/acceptance/live.sh` | docker + full `claude auth login` + app | `RCD_INSTANCE` inheritance into on-demand sessions, session-name format |
 
 Each script accepts `--teardown` to remove its container.
+
+Set `RCD_ACCEPTANCE_MODEL` to drive the in-container Claude with a lighter/cheaper
+model (e.g. `RCD_ACCEPTANCE_MODEL=haiku ./test/acceptance/skill.sh`, or `sonnet`,
+or a full model id). Unset uses the account default. A lighter model follows
+`SKILL.md` less reliably, so use it for quick smoke runs and the default for the
+canonical pass.

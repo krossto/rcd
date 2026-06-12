@@ -64,3 +64,8 @@ or the session-name format.
 - These units are manual by design and need credentials — never wire them into CI.
 - Findings should graduate into `lint`/`logic` checks where possible, shrinking
   the manual surface.
+- `RCD_ACCEPTANCE_MODEL` (optional) drives the in-container Claude with a lighter
+  model for cheaper/faster runs, e.g. `RCD_ACCEPTANCE_MODEL=haiku ./test/acceptance/skill.sh`
+  (also `sonnet`, or a full model id). Unset uses the account default. Lighter
+  models follow `SKILL.md` less reliably — prefer them for quick smoke runs and
+  the default model for the canonical pass.

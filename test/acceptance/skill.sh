@@ -6,6 +6,9 @@ set -uo pipefail
 C=rcd-acc-skill
 TOK=CLAUDE_CODE_OAUTH_TOKEN
 PLUGIN=/mnt/rcd
+# Optional: drive the in-container Claude with a lighter/cheaper model.
+#   RCD_ACCEPTANCE_MODEL=haiku|sonnet|<full-id>   (unset = account default)
+MODEL_FLAG=""; [ -n "${RCD_ACCEPTANCE_MODEL:-}" ] && MODEL_FLAG="--model ${RCD_ACCEPTANCE_MODEL}"
 pass=0; fail=0
 ok(){ pass=$((pass+1)); printf '  PASS %s\n' "$1"; }
 ng(){ fail=$((fail+1)); printf '  FAIL %s\n' "$1"; }
@@ -32,12 +35,12 @@ cjq(){ docker exec -i "$C" jq "$@"; }   # jq runs INSIDE the container (host nee
 rcd(){ # headless `/rcd <args>` in dir $1, remaining args = verb...
   local dir="$1"; shift
   ex bash -lc "export XDG_RUNTIME_DIR=/run/user/1000; cd '$dir'; \
-    claude -p \"/rcd $*\" --plugin-dir $PLUGIN --permission-mode acceptEdits \
+    claude -p \"/rcd $*\" --plugin-dir $PLUGIN $MODEL_FLAG --permission-mode acceptEdits \
     --add-dir \"\$HOME\" --add-dir $PLUGIN --allowedTools '$ALLOW'" 2>&1
 }
 
 # #1 load + /rcd resolution via system/init (spec §4 skill signal, §6 / research memo)
-init_json="$(ex bash -lc "claude -p '/rcd' --plugin-dir $PLUGIN --bare --output-format stream-json --verbose 2>/dev/null | head -1")"
+init_json="$(ex bash -lc "claude -p '/rcd' --plugin-dir $PLUGIN $MODEL_FLAG --bare --output-format stream-json --verbose 2>/dev/null | head -1")"
 echo "$init_json" | cjq -e '(.plugins // [] | map(.name) | index("rcd")) and ((.plugin_errors // []) | length == 0)' >/dev/null 2>&1 \
   && ok "plugin 'rcd' loaded (system/init.plugins, no plugin_errors)" \
   || { ng "plugin not loaded per system/init"; echo "$init_json" | head -c 400; }

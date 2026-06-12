@@ -56,5 +56,5 @@ Type /exit when done, then tear down:  $0 --teardown
 EOF
 # XDG_RUNTIME_DIR is required so the skill's `systemctl --user` finds the user bus;
 # the setup-token is passed so the session authenticates via inference (no login).
-docker exec -it -u rcd -e "$TOK=${!TOK}" -e RCD_INSTANCE=rcdtest-self "$C" \
-  bash -lc 'export XDG_RUNTIME_DIR=/run/user/1000; cd ~/rcdtest-root && claude --plugin-dir /mnt/rcd'
+docker exec -it -u rcd -e "$TOK=${!TOK}" -e RCD_INSTANCE=rcdtest-self -e RCD_ACCEPTANCE_MODEL "$C" \
+  bash -lc 'export XDG_RUNTIME_DIR=/run/user/1000; cd ~/rcdtest-root && claude --plugin-dir /mnt/rcd ${RCD_ACCEPTANCE_MODEL:+--model "$RCD_ACCEPTANCE_MODEL"}'
