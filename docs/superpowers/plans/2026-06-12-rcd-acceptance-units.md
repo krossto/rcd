@@ -355,7 +355,7 @@ git commit -m "rcd(acceptance): guards unit (stub fixtures + interactive typed-c
 **Files:**
 - Create: `test/acceptance/live.sh`
 
-検証（spec §4 live）: #8 G4 `RCD_INSTANCE` 継承、#9 G5 表示名。前提（full login→trust→base 起動）を内包。
+検証（spec §4 live）: #8 `RCD_INSTANCE` 継承、#9 表示名。前提（full login→trust→base 起動）を内包。
 
 - [ ] **Step 1: live.sh を作成**
 
@@ -429,7 +429,7 @@ Expected: `OK`
 
 - [ ] **Step 3: 実行検証（アプリ・人・要 full login）**
 
-Run: `./test/acceptance/live.sh`（手順1でフルログイン＋信頼、手順2で `active` 確認、手順3でアプリから G4/G5）。終了後 `./test/acceptance/live.sh --teardown` ＋ アプリのセッション削除。
+Run: `./test/acceptance/live.sh`（手順1でフルログイン＋信頼、手順2で `active` 確認、手順3でアプリから #8/#9（`RCD_INSTANCE` 継承・表示名））。終了後 `./test/acceptance/live.sh --teardown` ＋ アプリのセッション削除。
 Expected: `is-active: active`、on-demand で `RCD_INSTANCE=rcdtest-live`、表示名が `-` 区切り。
 
 - [ ] **Step 4: Commit**
@@ -572,7 +572,7 @@ git commit -m "rcd: manual-acceptance runbook for skill/guards/live"
 
 - [ ] **Step 1: `test/README.md` の概観表を3単位へ更新**
 
-`skill` 行を「`./test/acceptance/skill.sh`（headless・setup-token・機械判定）」、新たに `guards` 行（対話・typed-confirm/SELF）、`live` 行（アプリ・full login・G4/G5）に。実行は各単位スクリプト（`docs/manual-acceptance.md` 参照）と明記し、「同じコンテナを再利用／teardown 順序」の旧記述を削除（各単位独立）。`skill`/`guards`/`live` の節を `docs/manual-acceptance.md` の各節に対応させ、重複は最小化（詳細はランブックへ委譲）。
+`skill` 行を「`./test/acceptance/skill.sh`（headless・setup-token・機械判定）」、新たに `guards` 行（対話・typed-confirm/SELF）、`live` 行（アプリ・full login・`RCD_INSTANCE` 継承/表示名）に。実行は各単位スクリプト（`docs/manual-acceptance.md` 参照）と明記し、「同じコンテナを再利用／teardown 順序」の旧記述を削除（各単位独立）。`skill`/`guards`/`live` の節を `docs/manual-acceptance.md` の各節に対応させ、重複は最小化（詳細はランブックへ委譲）。
 
 - [ ] **Step 2: `test/README.ja.md` を同内容で更新**
 
@@ -621,11 +621,11 @@ git commit -m "rcd: note first-run workspace trust for /rcd start"
 
 - spec §4 `skill`（#1–#4）→ Task 3（`system/init` シグナル #1、init #2、start×3 #3、不正名 差分 #4）。
 - spec §4 `guards`（#5/#6、2フィクスチャ）→ Task 4（stub の `rcdtest-self`/`rcdtest-victim`、対話チェックリスト）。
-- spec §4 `live`（#8/#9、前提内包）→ Task 5（login+trust→base 起動→アプリ G4/G5）。
+- spec §4 `live`（#8/#9、前提内包）→ Task 5（login+trust→base 起動→アプリ #8/#9）。
 - spec §5 独立性 → 各単位スクリプトが `rcd_boot`/`rcd_teardown` で自前完結、固有コンテナ名（`rcd-acc-skill`/`-guards`/`-live`）。
 - spec §6-2 トークン非汚染 → Task 5 step2 で `unset-environment`、`skill` は import しない。
 - spec §6-3/§8-1 信頼 → Task 9（SKILL.md 注記）＋ Task 5（live で trust）。
-- spec §6-4 `--plugin-dir` → `guards`/`skill` の対話・headless は `--plugin-dir`、`live` の G4/G5 は `/rcd` 非依存。
+- spec §6-4 `--plugin-dir` → `guards`/`skill` の対話・headless は `--plugin-dir`、`live` の #8/#9 は `/rcd` 非依存。
 - spec §6-5 権限 → Task 3 の `ALLOW`＋`acceptEdits`＋2× `--add-dir`。
 - spec §6-7 SELF フィクスチャ → Task 4 が stub で active・listed を担保。
 - spec §9 出力物 → Task 1–9 で網羅（Dockerfile/lib/3単位/README/manual-acceptance/test README/SKILL 注記）。
